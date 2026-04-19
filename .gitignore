@@ -58,6 +58,12 @@ Thumbs.db
 # jig runtime state (per-project)
 .jig/
 
+# Local .claude/ workflow state written by the running MCP
+.claude/workflow/
+
+# uv lockfile — jig is consumed via uvx, resolved at install time
+uv.lock
+
 # Local dev
 *.log
 .env
