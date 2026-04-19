@@ -23,9 +23,9 @@ from pathlib import Path
 _APPROVE = json.dumps({"decision": "approve"})
 
 # ---------------------------------------------------------------------------
-# Paths (/var/home/rixmerz/agentcockpit is replaced by hookService.ts at install time)
+# Paths (<project-root> is replaced by hookService.ts at install time)
 # ---------------------------------------------------------------------------
-_PROJECT_PATH = os.environ.get("CLAUDE_PROJECT_DIR", "/var/home/rixmerz/agentcockpit")
+_PROJECT_PATH = os.environ.get("CLAUDE_PROJECT_DIR", "<project-root>")
 _HOOKS_DIR = Path(_PROJECT_PATH) / ".claude" / "hooks"
 _CACHE_FILE = _HOOKS_DIR / ".dcc_smells_cache.json"
 _BASELINE_FILE = _HOOKS_DIR / ".dcc_smells_baseline.json"
@@ -51,7 +51,7 @@ def _generate_smells_cache() -> dict | None:
     """
     try:
         import subprocess
-        dcc_src = Path.home() / "agentcockpit" / ".deltacodecube" / "src"
+        dcc_src = Path.home() / ".local" / "share" / "jig" / ".deltacodecube" / "src"
         if not dcc_src.exists():
             return None
 
@@ -72,7 +72,7 @@ except Exception as e:
         result = subprocess.run(
             ["python3", "-c", script],
             capture_output=True, text=True, timeout=4,
-            cwd=str(Path.home() / "agentcockpit" / ".deltacodecube"),
+            cwd=str(Path.home() / ".local" / "share" / "jig" / ".deltacodecube"),
         )
         if result.returncode != 0:
             return None
@@ -331,7 +331,7 @@ def main():
     # 8b. Security findings from cached scan (non-blocking)
     # ------------------------------------------------------------------
     try:
-        _sec_cache = os.path.join(_PROJECT_PATH, ".agentcockpit", "security-scan.json")
+        _sec_cache = os.path.join(_PROJECT_PATH, ".jig", "security-scan.json")
         if os.path.exists(_sec_cache):
             with open(_sec_cache, "r") as _f:
                 _scan = json.load(_f)

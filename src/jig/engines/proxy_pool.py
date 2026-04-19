@@ -3,15 +3,12 @@
 Lazy subprocess-per-MCP JSON-RPC stdio connections with idle timeout, reconnect
 on stale stdio, and automatic tool-description embedding at connect time.
 
-This module replaces `mcp_connection.py` from workflow-manager. The public
-`get_mcp_connection` and `increment_request_counter` helpers keep the same
-signatures so `dcc_integration.py` and other callers work unchanged.
-
 Config sources (in precedence order):
-    1. Proxy registrations made at runtime via `proxy_add` (persisted to
+    1. Proxy registrations made at runtime via ``proxy_add`` (persisted to
        ~/.config/jig/proxy.toml)
-    2. Legacy MCP configs from `hub_config.load_mcp_configs()` (agentcockpit
-       compatibility — will be deprecated once the init migration is universal)
+    2. User-scope MCPs declared in ~/.claude.json — picked up as a courtesy
+       so the handful of MCPs already configured at the Claude Code layer
+       show up in ``proxy_list`` without a separate ``proxy_add`` round.
 """
 from __future__ import annotations
 
@@ -136,7 +133,7 @@ class ProxyStatus:
 class McpConnection:
     """MCP subprocess connection with idle auto-stop + init handshake.
 
-    Drop-in compatible with workflow-manager's `McpConnection`: exposes `name`,
+    Exposes `name`,
     `start`, `call_tool`, `stop`, plus new `list_tools`, `touch`, `is_alive`.
     """
 
@@ -335,7 +332,7 @@ class McpConnection:
 
 
 # ---------------------------------------------------------------------------
-# Module-level pool + public helpers (drop-in compat with workflow-manager)
+# Module-level pool + public helpers
 # ---------------------------------------------------------------------------
 
 _pool: dict[str, McpConnection] = {}
@@ -346,7 +343,7 @@ def _resolve_config(mcp_name: str) -> ProxyConfig | None:
     configs = load_proxy_configs()
     if mcp_name in configs:
         return configs[mcp_name]
-    # Legacy fallback via hub_config (agentcockpit MCPs)
+    # Fallback: MCPs declared in ~/.claude.json user config
     try:
         from jig.engines.hub_config import load_mcp_configs
 

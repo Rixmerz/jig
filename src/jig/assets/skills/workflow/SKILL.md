@@ -19,10 +19,10 @@ Parsea `$ARGUMENTS` para determinar la acción:
 
 ## Ejecución
 
-El `project_dir` para este proyecto es: `/home/rixmerz/agentcockpit`
+El `project_dir` para este proyecto es: `/home/rixmerz/jig`
 
 ### Para status (default):
-Llama a `mcp__workflow-manager__workflow_status` con `project_dir="/home/rixmerz/agentcockpit"`.
+Llama a `mcp__jig__workflow_status` con `project_dir="/home/rixmerz/jig"`.
 
 Muestra el resultado en formato tabla:
 ```
@@ -33,15 +33,15 @@ Workflow: Step {current_step} - {step_name}
 ```
 
 ### Para advance:
-Llama a `mcp__workflow-manager__workflow_advance` con `project_dir="/home/rixmerz/agentcockpit"`.
+Llama a `mcp__jig__workflow_advance` con `project_dir="/home/rixmerz/jig"`.
 Confirma: "Avanzado a Step N - {nombre}"
 
 ### Para reset:
-Llama a `mcp__workflow-manager__workflow_reset` con `project_dir="/home/rixmerz/agentcockpit"`.
+Llama a `mcp__jig__workflow_reset` con `project_dir="/home/rixmerz/jig"`.
 Confirma: "Workflow reseteado a Step 0"
 
 ### Para set N:
-Llama a `mcp__workflow-manager__workflow_set_step` con `project_dir="/home/rixmerz/agentcockpit"` y `step_index=N`.
+Llama a `mcp__jig__workflow_set_step` con `project_dir="/home/rixmerz/jig"` y `step_index=N`.
 Confirma: "Workflow en Step N - {nombre}"
 
 ## Notas

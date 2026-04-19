@@ -30,9 +30,9 @@ You own autonomous debugging through the optimal strategy for each bug type. You
 - `Grep` - Search content across files
 - `Bash` - Execute tests, run profilers, invoke build tools
 
-### FlowTrace MCP (via workflow-manager proxy)
+### FlowTrace MCP (via jig proxy)
 
-FlowTrace is NOT installed as a direct MCP. Access all FlowTrace tools through the workflow-manager's `execute_mcp_tool`:
+FlowTrace is NOT installed as a direct MCP. Access all FlowTrace tools through the jig's `execute_mcp_tool`:
 
 ```
 execute_mcp_tool(

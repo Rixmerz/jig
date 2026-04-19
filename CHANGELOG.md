@@ -4,6 +4,39 @@ All notable changes to `jig` are documented in this file. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and versioning
 adheres to [SemVer](https://semver.org/).
 
+## [0.1.0a11] — 2026-04-19
+
+### Removed
+- Purge every agentcockpit reference — jig replaces agentcockpit, it
+  doesn't migrate from it.
+- Deleted assets with no meaning in jig:
+  - `agents/terminal.md` (xterm.js PTY panel)
+  - `agents/browser.md` (embedded webview)
+  - `agents/plugins.md` (agent plugin system for a desktop host)
+  - `agents/git-snapshots.md` (the bundled `snapshot_*` internal
+    proxy + the auto hook fully covers this)
+  - `commands/build.md` (distrobox + Tauri release flow)
+  - `skills/xterm-pty/`, `skills/css-theming/`,
+    `skills/react-tauri/`, `skills/rust-backend/` — all UI-stack
+    specific to agentcockpit.
+  - `workflows/framework-evolution-graph.yaml` — a workflow about
+    evolving workflow-manager itself.
+- Scrubbed hardcoded paths in every remaining asset/hook/engine:
+  `.agentcockpit/` → `.jig/`, `.workflow-manager/` →
+  `~/.local/share/jig/`, `workflow-manager` → `jig`, `agentcockpit`
+  → `jig`, `/var/home/rixmerz/agentcockpit` → `<project-root>`.
+- `graph_state.py`: dropped `AGENTCOCKPIT_CONFIG_FILE` and hub-config
+  load path. Centralized state dir is now unconditionally
+  `~/.local/share/jig/states/<project_name>/`.
+- `proxy_pool.py`: docstrings that referenced "replaces
+  mcp_connection.py from workflow-manager" and
+  "(agentcockpit compatibility)" rewritten.
+
+### Changed
+- `_TECH_SKILL_MAP` / `_TECH_RULE_MAP` entries trimmed to reference
+  only the skill set that still ships. (No `css-theming`,
+  `rust-backend`, `xterm-pty`, `react-tauri` remain.)
+
 ## [0.1.0a10] — 2026-04-19
 
 ### Removed

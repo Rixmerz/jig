@@ -19,9 +19,9 @@ def _bundled_assets_dir() -> Path:
 def _agents_source() -> Path:
     """Where list_available should read agents from.
 
-    Prefers a populated hub layout (hub_dir/.hub/agents) for users who
-    migrated from agentcockpit; otherwise falls back to the bundled
-    wheel assets.
+    Prefers a populated user hub (hub_dir/.hub/agents) when present —
+    that's the override slot for users who maintain a local curated
+    catalog. Otherwise falls back to the bundled wheel assets.
     """
     hub_agents = get_hub_dir() / ".hub" / "agents"
     if hub_agents.is_dir():
@@ -59,10 +59,8 @@ _TECH_SKILL_MAP: dict[str, list[str]] = {
     "kotlin": ["kotlin-patterns", "qa-patterns"],
     # Frameworks / domains
     "react": ["ts-patterns", "ui-patterns", "ux-patterns"],
-    "tauri": ["rs-patterns", "rust-backend"],
-    "deno-fresh": ["ts-patterns", "fresh-ui-components", "fresh-ui-animation"],
     "devops": ["devops-patterns", "dev-patterns"],
-    "frontend": ["ui-patterns", "ux-patterns", "css-theming"],
+    "frontend": ["ui-patterns", "ux-patterns"],
 }
 
 # Mapping: tech stack keywords -> language/domain rules to copy

@@ -50,13 +50,13 @@ def _get_file_path(hook_input: dict) -> str:
 
 def _find_state_dir(project_path: str) -> Path | None:
     """Find the centralized state directory for this project."""
-    config_path = Path.home() / "agentcockpit" / "agentcockpit-project.json"
+    config_path = Path.home() / ".local" / "share" / "jig" / "jig-project.json"
     if config_path.exists():
         try:
             config = json.loads(config_path.read_text(encoding="utf-8"))
-            states_dir = config.get("states_dir", ".agentcockpit/states")
+            states_dir = config.get("states_dir", "states")
             project_name = Path(project_path).name
-            state_dir = Path.home() / "agentcockpit" / states_dir / project_name
+            state_dir = Path.home() / ".local" / "share" / "jig" / states_dir / project_name
             if state_dir.exists():
                 return state_dir
         except Exception:
@@ -161,7 +161,7 @@ def _inject_patterns(state_dir: Path, file_ext: str) -> str | None:
 
 def _inject_checklist(project_path: str) -> str | None:
     """Derive implementation checklist from experience memory."""
-    wm_dir = Path.home() / ".workflow-manager"
+    wm_dir = Path.home() / ".local" / "share" / "jig"
     project_name = Path(project_path).name
 
     # Load experience entries
@@ -213,7 +213,7 @@ def _inject_checklist(project_path: str) -> str | None:
 
 def _inject_security(project_path: str, file_path: str) -> str | None:
     """Check cached security findings for this file."""
-    cache_path = Path(project_path) / ".agentcockpit" / "security-scan.json"
+    cache_path = Path(project_path) / ".jig" / "security-scan.json"
     if not cache_path.exists():
         return None
     try:

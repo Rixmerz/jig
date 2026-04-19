@@ -1,19 +1,19 @@
 ---
 name: mermaid-viz
-description: Mermaid diagram patterns for workflow and graph visualization in agentcockpit
+description: Mermaid diagram patterns for workflow and graph visualization in jig
 ---
 
 # Mermaid Visualization
 
 ## Overview
 
-agentcockpit uses Mermaid 11.x for rendering workflow graphs and workflow diagrams. The `MermaidRenderer` component takes graph definitions and renders interactive SVG diagrams.
+jig uses Mermaid 11.x for rendering workflow graphs and workflow diagrams. The `MermaidRenderer` component takes graph definitions and renders interactive SVG diagrams.
 
 ## Configuration
 
 - mermaid 11.12.2
 - Rendered in `src/components/workflow/MermaidRenderer.tsx`
-- Dark theme to match agentcockpit's glassmorphism UI
+- Dark theme to match jig's glassmorphism UI
 
 ## Common Patterns
 
@@ -33,7 +33,7 @@ import { MermaidRenderer } from '../components/workflow/MermaidRenderer';
 ```
 
 ### Workflow Graph Format
-Workflow graphs from the workflow-manager MCP use this structure:
+Workflow graphs from the jig MCP use this structure:
 ```yaml
 nodes:
   - id: analyze
@@ -57,7 +57,7 @@ mermaid.initialize({
     primaryColor: 'var(--accent)',
     primaryTextColor: 'var(--text-primary)',
     lineColor: 'var(--border)',
-    // Match agentcockpit theme
+    // Match jig theme
   }
 });
 ```

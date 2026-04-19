@@ -240,7 +240,7 @@ nodes:
     name: "Estrategia: FlowTrace / Profiling"
     model: sonnet
     mcps_enabled:
-      - "workflow-manager"
+      - "jig"
     tools_blocked:
       - "Write"
       - "Edit"
@@ -254,7 +254,7 @@ nodes:
       Para bugs de performance e integracion, necesitas observar el
       comportamiento runtime.
 
-      IMPORTANTE: FlowTrace NO es un MCP directo. Accede via workflow-manager:
+      IMPORTANTE: FlowTrace NO es un MCP directo. Accede via jig:
       ```
       execute_mcp_tool(
         mcp_name="flowtrace",
@@ -306,7 +306,7 @@ nodes:
     name: "Estrategia: Hibrida (Tests + Instrumentacion)"
     model: sonnet
     mcps_enabled:
-      - "workflow-manager"
+      - "jig"
     tools_blocked:
       - "Write"
       - "Edit"
@@ -320,7 +320,7 @@ nodes:
       Para bugs de concurrencia y memoria, combina tests estresantes
       con instrumentacion.
 
-      IMPORTANTE: FlowTrace NO es un MCP directo. Accede via workflow-manager:
+      IMPORTANTE: FlowTrace NO es un MCP directo. Accede via jig:
       ```
       execute_mcp_tool(
         mcp_name="flowtrace",
@@ -369,7 +369,7 @@ nodes:
     name: "Analizar Datos"
     model: sonnet
     mcps_enabled:
-      - "workflow-manager"
+      - "jig"
     tools_blocked:
       - "Write"
       - "Edit"
@@ -415,7 +415,7 @@ nodes:
     name: "Formar Hipotesis"
     model: sonnet
     mcps_enabled:
-      - "workflow-manager"
+      - "jig"
     tools_blocked:
       - "Write"
       - "Edit"
@@ -482,7 +482,7 @@ nodes:
     name: "Verificar Fix"
     model: sonnet
     mcps_enabled:
-      - "workflow-manager"
+      - "jig"
     tools_blocked:
       - "Write"
       - "Edit"
@@ -528,7 +528,7 @@ nodes:
     is_end: true
     model: sonnet
     mcps_enabled:
-      - "workflow-manager"
+      - "jig"
     tools_blocked:
       - "Edit"
       - "Task"

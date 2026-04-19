@@ -21,7 +21,7 @@ def main():
     tool_name = hook_input.get("tool_name", "")
 
     # Get project directory from environment
-    project_dir = os.environ.get("CLAUDE_PROJECT_DIR", "/home/rixmerz/agentcockpit")
+    project_dir = os.environ.get("CLAUDE_PROJECT_DIR", "<project-root>")
     workflow_dir = Path(project_dir) / ".claude" / "workflow"
 
     # Check if enforcer is enabled via config

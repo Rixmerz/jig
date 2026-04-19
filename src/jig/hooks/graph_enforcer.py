@@ -69,13 +69,13 @@ def get_state_path(project_dir):
     Hub pattern: {hub_dir}/{states_dir}/{project_name}/graph_state.json
     Local fallback: {project}/.claude/workflow/graph_state.json
     """
-    config_file = Path.home() / ".agentcockpit" / "config.json"
+    config_file = Path.home() / ".local" / "share" / "jig" / "config.json"
     if config_file.exists():
         try:
             config = json.loads(config_file.read_text())
             hub_dir = config.get("hub_dir")
             if hub_dir:
-                states_dir = config.get("states_dir", ".agentcockpit/states")
+                states_dir = config.get("states_dir", "states")
                 project_name = Path(project_dir).name
                 return Path(hub_dir) / states_dir / project_name / "graph_state.json"
         except Exception:

@@ -147,7 +147,7 @@ Detecta test framework y ejecuta tests:
 
 ## Acceso a FlowTrace
 
-FlowTrace NO es un MCP directo del agente. Se accede a traves del proxy `execute_mcp_tool` del workflow-manager:
+FlowTrace NO es un MCP directo del agente. Se accede a traves del proxy `execute_mcp_tool` del jig:
 
 ```
 execute_mcp_tool(

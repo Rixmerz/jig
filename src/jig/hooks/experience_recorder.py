@@ -248,7 +248,7 @@ def main():
     # -----------------------------------------------------------------------
     # Persist to project store and global store
     # -----------------------------------------------------------------------
-    wm_dir = Path.home() / ".workflow-manager"
+    wm_dir = Path.home() / ".local" / "share" / "jig"
 
     project_store_path = wm_dir / "project_memories" / project_name / "experience_memory.json"
     global_store_path = wm_dir / "experience_memory.json"
@@ -306,12 +306,12 @@ def main():
     # -----------------------------------------------------------------------
     try:
         # Find trends.json in state directory
-        _config_path = Path.home() / "agentcockpit" / "agentcockpit-project.json"
+        _config_path = Path.home() / ".local" / "share" / "jig" / "jig-project.json"
         _trends_path = None
         if _config_path.exists():
             _ac_config = json.loads(_config_path.read_text(encoding="utf-8"))
-            _states_dir = _ac_config.get("states_dir", ".agentcockpit/states")
-            _trend_candidate = Path.home() / "agentcockpit" / _states_dir / project_name / "trends.json"
+            _states_dir = _ac_config.get("states_dir", "states")
+            _trend_candidate = Path.home() / ".local" / "share" / "jig" / _states_dir / project_name / "trends.json"
             if _trend_candidate.exists():
                 _trends_path = _trend_candidate
 

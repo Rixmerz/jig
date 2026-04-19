@@ -16,7 +16,7 @@ You own the workflow/graph system - defining, executing, and visualizing AI agen
 - Workflow UI components (`src/components/workflow/`)
 - Mermaid graph rendering
 - Graph node execution and I/O management
-- Integration with workflow-manager MCP server
+- Integration with jig MCP server
 - Control bar workflow steps display
 
 ## Domain Structure
@@ -39,9 +39,9 @@ src/components/control-bar/
 ## Implementation Guidelines
 
 ### Workflow Manager MCP
-- External MCP server (`workflow-manager`) provides graph CRUD
+- External MCP server (`jig`) provides graph CRUD
 - YAML graph definitions
-- Deferred tool loading via `ToolSearch` for `mcp__workflow-manager__*`
+- Deferred tool loading via `ToolSearch` for `mcp__jig__*`
 
 ### Mermaid Visualization
 - Uses `mermaid 11.x` for graph rendering

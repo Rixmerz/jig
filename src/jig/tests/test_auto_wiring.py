@@ -243,7 +243,7 @@ def _read_security_cache(project_path: str) -> str | None:
     """
     try:
         import os
-        sec_cache = os.path.join(project_path, ".agentcockpit", "security-scan.json")
+        sec_cache = os.path.join(project_path, ".jig", "security-scan.json")
         if not os.path.exists(sec_cache):
             return None
         with open(sec_cache, "r") as f:
@@ -269,9 +269,9 @@ def _read_security_cache(project_path: str) -> str | None:
 class TestSecurityCacheReading:
     def test_reads_cache_with_findings(self, tmp_path):
         """Cache with criticalCount=1 and highCount=2 → security warning message."""
-        agentcockpit_dir = tmp_path / ".agentcockpit"
-        agentcockpit_dir.mkdir()
-        (agentcockpit_dir / "security-scan.json").write_text(json.dumps({
+        jig_dir = tmp_path / ".jig"
+        jig_dir.mkdir()
+        (jig_dir / "security-scan.json").write_text(json.dumps({
             "criticalCount": 1,
             "highCount": 2,
             "riskGrade": "C",
@@ -286,9 +286,9 @@ class TestSecurityCacheReading:
 
     def test_reads_cache_no_findings(self, tmp_path):
         """Cache with criticalCount=0 and highCount=0 → no output."""
-        agentcockpit_dir = tmp_path / ".agentcockpit"
-        agentcockpit_dir.mkdir()
-        (agentcockpit_dir / "security-scan.json").write_text(json.dumps({
+        jig_dir = tmp_path / ".jig"
+        jig_dir.mkdir()
+        (jig_dir / "security-scan.json").write_text(json.dumps({
             "criticalCount": 0,
             "highCount": 0,
         }))

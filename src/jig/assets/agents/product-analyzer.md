@@ -757,7 +757,7 @@ When product spec exists and analysis completes successfully:
 
 ```javascript
 async function syncCompletionJson(productSpec, analysisResult) {
-  const completionPath = ".workflow-manager/state/completion.json";
+  const completionPath = "~/.local/share/jig/states/completion.json";
 
   // Determine structure type
   const isHierarchical = productSpec.structure === "hierarchical";
@@ -1076,7 +1076,7 @@ Can start development: NO (blocking issues present)
 
 ========================================
 Analysis saved to: .claude/product/product-analysis.json
-Completion tracking: .workflow-manager/state/completion.json
+Completion tracking: ~/.local/share/jig/states/completion.json
 ========================================
 ```
 

@@ -27,4 +27,4 @@ Detect this project's tech stack and deploy specialized subagents.
    - List the skills assigned to each agent
    - Confirm the agents are ready to use
 
-If `deploy_project_agents` is not available (workflow-manager MCP not connected), explain that the user needs to connect to AgentCockpit first.
+If `deploy_project_agents` is not available (jig MCP not connected), explain that the user needs to connect to jig first.

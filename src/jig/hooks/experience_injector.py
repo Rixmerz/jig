@@ -138,7 +138,7 @@ def main():
     project_name = Path(project_dir).name if project_dir else ""
 
     # Load memory files
-    wm_dir = Path.home() / ".workflow-manager"
+    wm_dir = Path.home() / ".local" / "share" / "jig"
     global_entries = _load_entries(wm_dir / "experience_memory.json")
 
     project_entries = []

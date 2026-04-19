@@ -6,7 +6,7 @@ DCC analysis into the project experience_memory.json file. The frontend
 DCC reindex is triggered internally by WorkflowPanel polling (not this hook).
 
 Protocol:
-  stdin:  {"tool_name": "mcp__workflow-manager__graph_traverse", "tool_result": {...}}
+  stdin:  {"tool_name": "mcp__jig__graph_traverse", "tool_result": {...}}
   env:    CLAUDE_PROJECT_DIR
   stdout: {"decision": "approve"}
   stderr: brief transition summary
@@ -53,10 +53,10 @@ def _record_experience(result: dict, project_path: str) -> None:
     if isinstance(dcc_analysis, dict):
         smells_summary = dcc_analysis.get("smells", "")
 
-    # Try to import experience_memory from workflow-manager
-    wm_src = Path.home() / ".workflow-manager" / "src"
+    # Try to import experience_memory from jig
+    wm_src = Path.home() / ".local" / "share" / "jig" / "src"
     # Also try project-local install
-    proj_wm_src = Path(project_path) / ".workflow-manager" / "src"
+    proj_wm_src = Path(project_path) / ".jig" / "src"
     for src_path in [proj_wm_src, wm_src]:
         if src_path.exists() and str(src_path) not in sys.path:
             sys.path.insert(0, str(src_path))
@@ -124,7 +124,7 @@ def _record_experience_fallback(result: dict, project_path: str,
                                  reason: str, smells_summary: str, impact: dict) -> None:
     """Fallback when experience_memory module is unavailable."""
     project_name = Path(project_path).name
-    wm_dir = Path.home() / ".workflow-manager"
+    wm_dir = Path.home() / ".local" / "share" / "jig"
     proj_mem_dir = wm_dir / "project_memories" / project_name
     proj_mem_dir.mkdir(parents=True, exist_ok=True)
     mem_file = proj_mem_dir / "experience_memory.json"

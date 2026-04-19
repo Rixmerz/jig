@@ -9,7 +9,7 @@ description: |
   - Se usa desde el macro-orchestrator para ejecutar micro-flujos
 tools: Read, Glob, Grep, Bash
 mcpServers:
-  - workflow-manager
+  - jig
 skills:
   - workflow
 ---
