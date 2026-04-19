@@ -3,7 +3,7 @@
 import shutil
 from pathlib import Path
 
-from jig.hub_config import get_hub_dir
+from jig.engines.hub_config import get_hub_dir
 
 
 # Mapping: tech stack keywords -> recommended skills

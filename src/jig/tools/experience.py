@@ -5,13 +5,13 @@ experience_list, experience_stats.
 from pathlib import Path
 
 from jig.core.session import resolve_project_dir
-from jig.experience_memory import (
+from jig.engines.experience_memory import (
     ExperienceEntry, merge_stores,
     generalize_path, extract_file_keywords, guess_domain,
     compute_relevance, GLOBAL_MEMORY_FILE, PROJECT_MEMORIES_DIR,
     derive_implementation_checklist, format_checklist_for_prompt,
 )
-from jig.dcc_integration import (
+from jig.engines.dcc_integration import (
     get_experience_store, get_project_experience_store,
 )
 
@@ -111,7 +111,7 @@ def register_experience_tools(mcp):
         resolved_dir, sid = resolve_project_dir(project_dir, session_id)
         project_name = Path(resolved_dir).name
 
-        from jig.experience_memory import VALID_TYPES, VALID_SEVERITIES, VALID_SCOPES
+        from jig.engines.experience_memory import VALID_TYPES, VALID_SEVERITIES, VALID_SCOPES
 
         if type not in VALID_TYPES:
             return {

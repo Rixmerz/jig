@@ -6,8 +6,8 @@ context reading files to discover basic project state.
 """
 
 from jig.core.session import resolve_project_dir
-from jig.graph_state import _get_centralized_state_dir
-from jig.project_metadata import ProjectMetadata
+from jig.engines.graph_state import _get_centralized_state_dir
+from jig.engines.project_metadata import ProjectMetadata
 
 _VALID_SECTIONS = frozenset(
     {"migration_number", "id_patterns", "bounded_contexts", "tech_stack", "project_structure"}

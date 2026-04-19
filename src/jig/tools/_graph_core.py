@@ -7,19 +7,19 @@ import sys
 from datetime import datetime
 
 from jig.core.session import resolve_project_dir
-from jig.hub_config import load_enforcer_config
-from jig.graph_engine import (
+from jig.engines.hub_config import load_enforcer_config
+from jig.engines.graph_engine import (
     Graph, GraphState, MaxVisitsExceeded,
     evaluate_transitions, take_transition,
     _write_contract_files, _cleanup_contract_files,
     compute_ready_tasks, is_dag_complete, Task,
 )
-from jig.graph_parser import load_graph_from_file, GraphParseError
-from jig.graph_state import (
+from jig.engines.graph_parser import load_graph_from_file, GraphParseError
+from jig.engines.graph_state import (
     load_graph_state, save_graph_state, initialize_graph_state,
     reset_graph_state, get_graph_file, get_node_visit_warning,
 )
-from jig.dcc_integration import (
+from jig.engines.dcc_integration import (
     _is_dcc_available, _resolve_dcc_config, _run_dcc_analysis,
     _collect_experiences_from_dcc, _check_tension_gate,
     _clear_tension_gate_state, _get_tension_gate_info,
@@ -347,8 +347,8 @@ def register_graph_core_tools(mcp):
 
         # Record trend snapshot after DCC analysis
         try:
-            from jig.graph_state import _get_centralized_state_dir
-            from jig.trend_tracker import record_snapshot
+            from jig.engines.graph_state import _get_centralized_state_dir
+            from jig.engines.trend_tracker import record_snapshot
             _trend_state_dir = str(_get_centralized_state_dir(resolved_dir))
             _trend_metrics = {}
             if dcc_result:
@@ -432,7 +432,7 @@ def register_graph_core_tools(mcp):
             _budget = 6000
 
             try:
-                from jig.graph_state import _get_centralized_state_dir
+                from jig.engines.graph_state import _get_centralized_state_dir
                 _state_dir = str(_get_centralized_state_dir(resolved_dir))
             except Exception:
                 _state_dir = ""
@@ -440,7 +440,7 @@ def register_graph_core_tools(mcp):
             if _state_dir:
                 # Pattern catalog
                 try:
-                    from jig.pattern_catalog import PatternCatalog
+                    from jig.engines.pattern_catalog import PatternCatalog
                     _pc = PatternCatalog.load(resolved_dir, _state_dir)
                     if _pc:
                         _snippet = _pc.to_prompt_injection()
@@ -452,7 +452,7 @@ def register_graph_core_tools(mcp):
 
                 # Experience checklist
                 try:
-                    from jig.experience_memory import derive_implementation_checklist, format_checklist_for_prompt
+                    from jig.engines.experience_memory import derive_implementation_checklist, format_checklist_for_prompt
                     _task_type = "bounded_context"
                     if "feature" in _node_id_lower:
                         _task_type = "feature"
@@ -471,7 +471,7 @@ def register_graph_core_tools(mcp):
 
                 # Project metadata (key sections only)
                 try:
-                    from jig.project_metadata import ProjectMetadata
+                    from jig.engines.project_metadata import ProjectMetadata
                     _pm = ProjectMetadata.load(resolved_dir, _state_dir)
                     if _pm:
                         _meta = _pm.get()

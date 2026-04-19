@@ -2,8 +2,8 @@
 
 import uuid
 
-from jig.hub_config import get_global_workflows_dir
-from jig.graph_parser import parse_graph_yaml, GraphParseError
+from jig.engines.hub_config import get_global_workflows_dir
+from jig.engines.graph_parser import parse_graph_yaml, GraphParseError
 from jig.core.session import resolve_project_dir
 
 

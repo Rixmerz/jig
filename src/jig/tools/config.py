@@ -1,10 +1,10 @@
 """Config tools: set_session, workflow_set_enabled, workflow_set_dcc_injection."""
 
 from jig.core.session import get_or_create_session, set_session_project_dir, resolve_project_dir
-from jig.hub_config import (
+from jig.engines.hub_config import (
     get_workflow_dir, load_enforcer_config, save_enforcer_config,
 )
-from jig.dcc_integration import _is_dcc_available
+from jig.engines.dcc_integration import _is_dcc_available
 
 
 def register_config_tools(mcp):

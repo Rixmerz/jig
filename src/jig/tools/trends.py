@@ -1,8 +1,8 @@
 """Trend tracking tools: record, query, and summarize quality metrics over time."""
 
 from jig.core.session import resolve_project_dir
-from jig.graph_state import _get_centralized_state_dir
-from jig.trend_tracker import record_snapshot, get_trend, format_trend_summary
+from jig.engines.graph_state import _get_centralized_state_dir
+from jig.engines.trend_tracker import record_snapshot, get_trend, format_trend_summary
 
 
 def register_trend_tools(mcp):

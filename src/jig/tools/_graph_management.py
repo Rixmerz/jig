@@ -8,14 +8,14 @@ import sys
 from pathlib import Path
 
 from jig.core.session import resolve_project_dir
-from jig.hub_config import get_workflows_library_dir, load_enforcer_config
-from jig.graph_engine import Graph, GraphState, generate_mermaid
-from jig.graph_parser import load_graph_from_file, GraphParseError
-from jig.graph_state import (
+from jig.engines.hub_config import get_workflows_library_dir, load_enforcer_config
+from jig.engines.graph_engine import Graph, GraphState, generate_mermaid
+from jig.engines.graph_parser import load_graph_from_file, GraphParseError
+from jig.engines.graph_state import (
     load_graph_state, initialize_graph_state,
     get_graph_file, save_graph_state,
 )
-from jig.dcc_integration import (
+from jig.engines.dcc_integration import (
     _is_dcc_available, _execute_dcc_tool, _extract_tensions,
     _resolve_dcc_config, _run_dcc_analysis,
 )
@@ -160,13 +160,13 @@ def register_graph_management_tools(mcp):
 
         # Auto-refresh project metadata and pattern catalog on activation
         try:
-            from jig.graph_state import _get_centralized_state_dir
+            from jig.engines.graph_state import _get_centralized_state_dir
             state_dir = str(_get_centralized_state_dir(resolved_dir))
         except Exception:
             state_dir = str(Path(resolved_dir) / ".claude" / "workflow")
 
         try:
-            from jig.project_metadata import ProjectMetadata
+            from jig.engines.project_metadata import ProjectMetadata
             pm = ProjectMetadata(resolved_dir)
             pm.discover_all()
             pm.save(state_dir)
@@ -174,7 +174,7 @@ def register_graph_management_tools(mcp):
             print(f"[workflow-manager] Metadata refresh failed (non-fatal): {e}", file=sys.stderr)
 
         try:
-            from jig.pattern_catalog import PatternCatalog
+            from jig.engines.pattern_catalog import PatternCatalog
             pc = PatternCatalog(resolved_dir)
             pc.discover_all()
             pc.save(state_dir)

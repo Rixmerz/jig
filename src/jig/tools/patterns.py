@@ -6,8 +6,8 @@ project conventions.
 """
 
 from jig.core.session import resolve_project_dir
-from jig.graph_state import _get_centralized_state_dir
-from jig.pattern_catalog import PatternCatalog
+from jig.engines.graph_state import _get_centralized_state_dir
+from jig.engines.pattern_catalog import PatternCatalog
 
 _VALID_PATTERN_TYPES = frozenset({
     "repository",
