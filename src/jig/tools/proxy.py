@@ -24,7 +24,7 @@ if TYPE_CHECKING:
     from fastmcp import FastMCP
 
 from jig.core import embed_cache
-from jig.engines import proxy_pool
+from jig.engines import internal_proxy, proxy_pool
 
 
 def register(mcp: "FastMCP") -> None:
@@ -73,19 +73,31 @@ def register(mcp: "FastMCP") -> None:
 
     @mcp.tool()
     async def proxy_list() -> dict[str, Any]:
-        """List all registered proxies with live status."""
+        """List all registered proxies with live status.
+
+        Internal proxies (e.g. ``graph``, ``dcc``) are always reported as
+        connected since they dispatch to in-process Python callables.
+        """
         statuses = await proxy_pool.proxy_statuses()
-        return {
-            "proxies": [
-                {
-                    "name": s.name,
-                    "connected": s.connected,
-                    "tool_count": s.tool_count,
-                    "last_error": s.last_error,
-                }
-                for s in statuses
-            ]
-        }
+        rows = [
+            {
+                "name": s.name,
+                "connected": s.connected,
+                "tool_count": s.tool_count,
+                "last_error": s.last_error,
+                "kind": "subprocess",
+            }
+            for s in statuses
+        ]
+        for mcp_name in internal_proxy.list_mcps():
+            rows.append({
+                "name": mcp_name,
+                "connected": True,
+                "tool_count": len(internal_proxy.list_tools(mcp_name)),
+                "last_error": None,
+                "kind": "internal",
+            })
+        return {"proxies": rows}
 
     @mcp.tool()
     async def proxy_list_tools(name: str) -> dict[str, Any]:
@@ -155,10 +167,23 @@ def register(mcp: "FastMCP") -> None:
         tool_name: str,
         arguments: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
-        """Invoke a tool on a proxied MCP (subprocess).
+        """Invoke a tool on a proxied MCP.
 
-        Use proxy_tools_search first to discover what is available.
+        Routes to an in-process handler when the proxy is registered as
+        internal (e.g. ``graph``, ``dcc``), otherwise spawns/reuses a
+        subprocess MCP. Use ``proxy_tools_search`` first to discover
+        capabilities.
         """
+        handler = internal_proxy.get(mcp_name, tool_name)
+        if handler is not None:
+            try:
+                result = await internal_proxy.invoke(handler, arguments)
+                return {"result": result}
+            except TypeError as e:
+                return {"error": {"code": -2, "message": f"bad arguments: {e}"}}
+            except Exception as e:
+                return {"error": {"code": -3, "message": str(e)}}
+
         conn = await proxy_pool.get_mcp_connection(mcp_name)
         if conn is None:
             return {

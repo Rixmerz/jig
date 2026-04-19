@@ -4,6 +4,30 @@ All notable changes to `jig` are documented in this file. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and versioning
 adheres to [SemVer](https://semver.org/).
 
+## [0.1.0a6] — 2026-04-19
+
+### Added
+- `engines/internal_proxy.py`: in-process handler registry for tools
+  archived off jig's top-level MCP surface. Dispatch happens directly
+  in Python — no subprocess, no JSON-RPC. Descriptions go into the
+  embed cache at registration so `proxy_tools_search` finds them.
+- `execute_mcp_tool` now routes to internal handlers when the proxy
+  is registered internal; subprocess path unchanged for external MCPs.
+- `proxy_list` reports internal proxies as always-connected with a
+  `kind: "internal"` field alongside subprocess ones.
+
+### Changed
+- 18 of 24 `graph_*` tools archived to the internal proxy named `graph`.
+  Top-level surface keeps the hot path: `graph_activate`,
+  `graph_status`, `graph_traverse`, `graph_reset`,
+  `graph_list_available`, `graph_timeline`. The rest
+  (`graph_builder_*`, `graph_check_*`, `graph_mid_phase_dcc`,
+  `graph_override_max_visits`, `graph_record_output`, `graph_set_node`,
+  `graph_visualize`, `graph_validate`, `graph_acknowledge_tensions`,
+  `graph_get_ready_tasks`, `graph_task_complete`) are reachable via
+  `execute_mcp_tool("graph", "<name>", {...})` and discoverable via
+  `proxy_tools_search`. Tool count drops from 56 to 38.
+
 ## [0.1.0a5] — 2026-04-19
 
 ### Fixed
