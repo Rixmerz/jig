@@ -4,6 +4,21 @@ All notable changes to `jig` are documented in this file. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and versioning
 adheres to [SemVer](https://semver.org/).
 
+## [0.1.0a5] — 2026-04-19
+
+### Fixed
+- `experience_memory`: primary storage moved to XDG
+  (`~/.local/share/jig/experience_memory.json`,
+  `~/.local/share/jig/project_memories/`). Legacy
+  `~/.workflow-manager/` is still read as a fallback when the XDG
+  files don't exist, so existing entries from the agentcockpit era
+  remain visible until a manual migration.
+- `tool_index.LEARNED_WEIGHTS_FILE`: same XDG + legacy-fallback pattern.
+- `list_available_agents_and_skills` and `deploy_project_agents`
+  now read bundled agents/skills/rules from `jig.assets` via
+  `importlib.resources` when the hub dir is empty. No more
+  `[Errno 2] No such file or directory` on fresh installs.
+
 ## [0.1.0a4] — 2026-04-19
 
 ### Added

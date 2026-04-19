@@ -3,7 +3,44 @@
 import shutil
 from pathlib import Path
 
+import jig
 from jig.engines.hub_config import get_hub_dir
+
+
+def _bundled_assets_dir() -> Path:
+    """Return the filesystem path to jig.assets/ inside the installed wheel.
+
+    Uses jig's package __file__ instead of importlib.resources because some
+    loaders return a MultiplexedPath that can't be consumed as a plain Path.
+    """
+    return Path(jig.__file__).parent / "assets"
+
+
+def _agents_source() -> Path:
+    """Where list_available should read agents from.
+
+    Prefers a populated hub layout (hub_dir/.hub/agents) for users who
+    migrated from agentcockpit; otherwise falls back to the bundled
+    wheel assets.
+    """
+    hub_agents = get_hub_dir() / ".hub" / "agents"
+    if hub_agents.is_dir():
+        return hub_agents
+    return _bundled_assets_dir() / "agents"
+
+
+def _skills_source() -> Path:
+    hub_skills = get_hub_dir() / ".hub" / "skills"
+    if hub_skills.is_dir():
+        return hub_skills
+    return _bundled_assets_dir() / "skills"
+
+
+def _rules_source() -> Path:
+    hub_rules = get_hub_dir() / ".hub" / "rules"
+    if hub_rules.is_dir():
+        return hub_rules
+    return _bundled_assets_dir() / "rules"
 
 
 # Mapping: tech stack keywords -> recommended skills
@@ -180,8 +217,8 @@ def register_deployment_tools(mcp):
             )
         """
         hub_dir = get_hub_dir()
-        hub_agents_dir = hub_dir / ".hub" / "agents"
-        hub_skills_dir = hub_dir / ".hub" / "skills"
+        hub_agents_dir = _agents_source()
+        hub_skills_dir = _skills_source()
 
         target = Path(project_path).resolve()
         if not target.exists():
@@ -191,7 +228,7 @@ def register_deployment_tools(mcp):
         target_agents_dir = target / ".claude" / "agents"
         target_skills_dir = target / ".claude" / "skills"
 
-        hub_rules_dir = hub_dir / ".hub" / "rules"
+        hub_rules_dir = _rules_source()
 
         # Resolve what to deploy
         agents_to_deploy = _resolve_agents_for_stack(tech_stack, extra_agents) if include_core else list(extra_agents or [])
@@ -314,8 +351,8 @@ def register_deployment_tools(mcp):
             Lists of available agent names and skill names with descriptions
         """
         hub_dir = get_hub_dir()
-        hub_agents_dir = hub_dir / ".hub" / "agents"
-        hub_skills_dir = hub_dir / ".hub" / "skills"
+        hub_agents_dir = _agents_source()
+        hub_skills_dir = _skills_source()
 
         agents = []
         for f in sorted(hub_agents_dir.glob("*.md")):

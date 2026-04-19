@@ -93,8 +93,14 @@ STOPWORDS = {
 # Dynamic Weight Learning System (Global)
 # ============================================================================
 
-# Global path for learned weights (shared across all projects)
-LEARNED_WEIGHTS_FILE = Path.home() / ".workflow-manager" / "learned_weights.json"
+# Global path for learned weights (shared across all projects).
+# Prefer XDG data dir; fall back to legacy ~/.workflow-manager/ for reads.
+from jig.core import paths as _paths
+
+_LEGACY_LEARNED_WEIGHTS_FILE = Path.home() / ".workflow-manager" / "learned_weights.json"
+LEARNED_WEIGHTS_FILE = _paths.data_dir() / "learned_weights.json"
+if not LEARNED_WEIGHTS_FILE.exists() and _LEGACY_LEARNED_WEIGHTS_FILE.exists():
+    LEARNED_WEIGHTS_FILE = _LEGACY_LEARNED_WEIGHTS_FILE
 
 # In-memory cache of learned weights
 # Structure: {"mcp:tool_name": {"keyword": weight, ...}, ...}
