@@ -70,13 +70,10 @@ def _cmd_serve(_args: argparse.Namespace) -> int:
 
 
 def _cmd_init(args: argparse.Namespace) -> int:
-    """Scaffold project. Implementation lives in jig.cli.init_cmd (Sprint 3)."""
-    print(
-        f"[jig] init command is not yet implemented (target={args.path}). "
-        "Scheduled for Sprint 3.",
-        file=sys.stderr,
-    )
-    return 2
+    """Scaffold project — see jig.cli.init_cmd for details."""
+    from jig.cli.init_cmd import run
+
+    return run(args)
 
 
 def _cmd_doctor(_args: argparse.Namespace) -> int:
