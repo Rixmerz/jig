@@ -1,10 +1,12 @@
-"""Configuration for DeltaCodeCube MCP."""
+"""Configuration for DeltaCodeCube (vendored inside jig)."""
 
 import os
 from pathlib import Path
 
-# Data directory for SQLite database
-DATA_DIR = Path(os.environ.get("DCC_DATA_DIR", Path.home() / ".deltacodecube"))
+# Unify DCC state under jig's XDG data dir. Override with DCC_DATA_DIR env
+# if you need a separate location (e.g. a shared team DB).
+_DEFAULT_DATA_DIR = Path.home() / ".local" / "share" / "jig"
+DATA_DIR = Path(os.environ.get("DCC_DATA_DIR", _DEFAULT_DATA_DIR))
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 
 # Database path

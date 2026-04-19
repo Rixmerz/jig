@@ -4,6 +4,52 @@ All notable changes to `jig` are documented in this file. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and versioning
 adheres to [SemVer](https://semver.org/).
 
+## [0.1.0a12] — 2026-04-19
+
+### Added
+- `engines.dcc_integration.smells_for_files(paths, *, max_results)`:
+  best-effort API that opens the vendored DCC SQLite db (if present),
+  runs `SmellDetector.detect_all()`, filters smells whose file_path
+  hits any of the given paths, and returns up to `max_results` ranked
+  by severity. Returns `[]` on any missing prerequisite — no DB, no
+  index, no smells, raise.
+- `hooks.snapshot_trigger`: after the git-diff delta block, appends
+  a "DCC smells in changed files" block when the above API finds
+  anything. Still a no-op when DCC hasn't been indexed.
+- `scripts/fresh-vm-e2e.sh`: one-shot end-to-end validation inside a
+  clean `python:3.12-slim` container. Installs jig via `uv tool
+  install`, scaffolds a project with `jig init`, asserts `.claude/`
+  layout, runs `jig doctor`, verifies the surfaced tool count +
+  internal proxies, checks `jig_guide`, checks failing
+  `proxy_refresh_embeddings`, and runs the pytest suite in a
+  writable copy. **Currently green** (first real fresh-VM validation).
+
+### Changed
+- `engines.dcc.config`: DCC's SQLite now lives under jig's XDG
+  directory (`~/.local/share/jig/dcc.db`) instead of
+  `~/.deltacodecube/`. Closes the last independent data-dir.
+  Override via `DCC_DATA_DIR` still works.
+- `engines.proxy_pool`: `proxy_statuses` and `_resolve_config` now
+  skip MCP names matching jig itself (`jig`, `jig-mcp`) so the
+  ghost-self-proxy that previously showed up as
+  `{kind: subprocess, connected: false}` in `proxy_list` is gone.
+- `tools.deployment._TECH_SKILL_MAP` / `_TECH_RULE_MAP`: re-add
+  `tauri`, `react-tauri`, `rust-backend`, `css-theming` entries now
+  that the underlying skill packages have been recovered (see next).
+
+### Recovered
+- Reinstate 4 agents + 4 skills + 1 command that were deleted in
+  0.1.0a11. Copied from the agentcockpit source
+  (`~/Projects/agentcockpit/.hub/…`) rather than rewritten from
+  scratch, then scrubbed with the same sed pipeline that cleans
+  engine code: `.agentcockpit/` → `.jig/`, `.workflow-manager/` →
+  `~/.local/share/jig/`, `/var/home/rixmerz/agentcockpit` →
+  `<project-root>`, `agentcockpit` → `jig`.
+  - `agents/{browser,plugins,terminal,git-snapshots}.md`
+  - `skills/{css-theming,react-tauri,rust-backend,xterm-pty}/`
+  - `commands/build.md`
+- Catalog back to 19 agents, 26 skills, 5 commands, 23 rules.
+
 ## [0.1.0a11] — 2026-04-19
 
 ### Removed

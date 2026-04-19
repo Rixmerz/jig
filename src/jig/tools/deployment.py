@@ -58,9 +58,10 @@ _TECH_SKILL_MAP: dict[str, list[str]] = {
     "csharp": ["csharp-patterns", "qa-patterns"],
     "kotlin": ["kotlin-patterns", "qa-patterns"],
     # Frameworks / domains
-    "react": ["ts-patterns", "ui-patterns", "ux-patterns"],
+    "react": ["ts-patterns", "ui-patterns", "ux-patterns", "react-tauri"],
+    "tauri": ["rs-patterns", "rust-backend"],
     "devops": ["devops-patterns", "dev-patterns"],
-    "frontend": ["ui-patterns", "ux-patterns"],
+    "frontend": ["ui-patterns", "ux-patterns", "css-theming"],
 }
 
 # Mapping: tech stack keywords -> language/domain rules to copy

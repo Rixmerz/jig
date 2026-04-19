@@ -6,6 +6,7 @@ impact preview simulation, and experience collection from DCC results.
 from __future__ import annotations
 
 import json
+import logging
 import subprocess
 import sys
 import time
@@ -24,6 +25,48 @@ from .experience_memory import (
     compute_relevance,
     GLOBAL_MEMORY_FILE, PROJECT_MEMORIES_DIR,
 )
+
+
+_SEVERITY_ORDER = {"critical": 0, "high": 1, "medium": 2, "low": 3}
+
+
+def smells_for_files(paths: list[str] | set[str], *, max_results: int = 5) -> list[dict]:
+    """Return up to ``max_results`` DCC code smells touching any of ``paths``.
+
+    Cheap best-effort: returns ``[]`` when the DCC database doesn't exist,
+    isn't populated, or any stage of the detection pipeline fails. Used by
+    ``snapshot_trigger`` to fold smell deltas into the context Claude sees
+    after an Edit/Write/Bash cycle.
+    """
+    try:
+        from jig.engines.dcc.config import DB_PATH
+        if not DB_PATH.exists():
+            return []
+        from jig.engines.dcc.cube.smells import SmellDetector
+        from jig.engines.dcc.db.database import get_connection
+    except Exception:
+        return []
+
+    wanted = {str(p) for p in paths if p}
+    if not wanted:
+        return []
+
+    try:
+        with get_connection() as conn:
+            detector = SmellDetector(conn)
+            all_smells = detector.detect_all()
+    except Exception:
+        return []
+
+    hits = []
+    for s in all_smells:
+        d = s.to_dict() if hasattr(s, "to_dict") else dict(s)
+        file_path = d.get("file_path") or d.get("file") or ""
+        if file_path in wanted or any(file_path.endswith(p) for p in wanted):
+            hits.append(d)
+
+    hits.sort(key=lambda d: _SEVERITY_ORDER.get(d.get("severity", "low"), 99))
+    return hits[:max_results]
 
 
 # ============================================================================

@@ -343,6 +343,8 @@ def _resolve_config(mcp_name: str) -> ProxyConfig | None:
     configs = load_proxy_configs()
     if mcp_name in configs:
         return configs[mcp_name]
+    if mcp_name in _SELF_MCP_NAMES:
+        return None
     # Fallback: MCPs declared in ~/.claude.json user config
     try:
         from jig.engines.hub_config import load_mcp_configs
@@ -452,12 +454,19 @@ async def proxy_reconnect(name: str) -> bool:
     return True
 
 
+_SELF_MCP_NAMES = frozenset({"jig", "jig-mcp"})
+
+
 async def proxy_statuses() -> list[ProxyStatus]:
     configs = load_proxy_configs()
-    # Include legacy configs too, read-only visibility
+    # Also surface MCPs declared in ~/.claude.json so proxy_list shows the
+    # whole picture. Skip jig itself — a self-proxy is never useful and just
+    # confuses the output with a ghost entry.
     try:
         from jig.engines.hub_config import load_mcp_configs
         for name, raw in load_mcp_configs().items():
+            if name in _SELF_MCP_NAMES:
+                continue
             if name not in configs and raw.get("command"):
                 configs[name] = ProxyConfig(
                     name=name,
