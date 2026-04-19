@@ -4,6 +4,25 @@ All notable changes to `jig` are documented in this file. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and versioning
 adheres to [SemVer](https://semver.org/).
 
+## [0.1.0a8] — 2026-04-19
+
+### Added
+- `jig init --source <spec>` (and `JIG_SOURCE` env var) controls what
+  install source gets written into the rendered `.mcp.json`. Defaults
+  to `uvx jig-mcp` (PyPI, once published). Pre-PyPI users can pass
+  `--source git+https://github.com/Rixmerz/jig` to render
+  `uvx --from git+https://... jig-mcp` instead of the PyPI-only form.
+- Matching pattern recognised: bare package names stay bare; anything
+  starting with `git+`, `.`, or containing `/` is treated as a source
+  spec and wrapped with `uvx --from`.
+
+### Fixed
+- Test suite fully green (150/150). Legacy `workflow_manager.*` imports
+  in `test_dcc_smart_filtering.py` and `test_experience_checklist.py`
+  now point at `jig.engines.*`. Experience-memory tests additionally
+  pin the `_LEGACY_*` fallback constants so XDG-first / legacy-fallback
+  logic (0.1.0a5) can't read the user's real `~/.workflow-manager/`.
+
 ## [0.1.0a7] — 2026-04-19
 
 ### Changed

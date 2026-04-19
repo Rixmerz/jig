@@ -53,6 +53,16 @@ def _build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Show what init would do without writing anything",
     )
+    init.add_argument(
+        "--source",
+        default=None,
+        help=(
+            "Install source written into the rendered .mcp.json (e.g. "
+            "'git+https://github.com/Rixmerz/jig' for pre-PyPI installs). "
+            "Can also be set via JIG_SOURCE env var. Defaults to 'jig-mcp' "
+            "(i.e. pulls from PyPI once the package is published)."
+        ),
+    )
     init.set_defaults(func=_cmd_init)
 
     doctor = sub.add_parser("doctor", help="Run diagnostics on the jig installation")

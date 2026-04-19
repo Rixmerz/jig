@@ -18,6 +18,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import json
+import os
 import shutil
 import sys
 import time
@@ -26,6 +27,22 @@ from pathlib import Path
 
 from jig.core import paths
 from jig.engines import proxy_pool
+
+
+def _resolve_jig_source(args: argparse.Namespace) -> tuple[str, list[str]]:
+    """Pick the command+args for the rendered `jig` entry in .mcp.json.
+
+    Precedence: --source flag > JIG_SOURCE env > PyPI default.
+    When the source starts with 'git+' or looks like a path,
+    render uvx --from <source> jig-mcp; otherwise assume it's the
+    PyPI package spec.
+    """
+    source = getattr(args, "source", None) or os.environ.get("JIG_SOURCE")
+    if not source:
+        return "uvx", ["jig-mcp"]
+    if source.startswith("git+") or source.startswith(".") or "/" in source:
+        return "uvx", ["--from", source, "jig-mcp"]
+    return "uvx", [source]
 
 
 def run(args: argparse.Namespace) -> int:
@@ -66,9 +83,10 @@ def run(args: argparse.Namespace) -> int:
         print(f"[jig.init] migrated {migrated} local MCP(s) to proxy config")
 
     # 3. Write stripped .mcp.json
+    jig_cmd, jig_args = _resolve_jig_source(args)
     new_mcp_json = {
         "mcpServers": {
-            "jig": {"command": "uvx", "args": ["jig-mcp"]},
+            "jig": {"command": jig_cmd, "args": jig_args},
             **remote_mcps,
         }
     }
