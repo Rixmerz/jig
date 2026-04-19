@@ -1,7 +1,10 @@
-"""AgentCockpit Hub Configuration (Centralized Architecture).
+"""Hub configuration for jig.
 
 Manages hub paths, workflow directories, project state directories,
-and enforcer configuration.
+and enforcer configuration. Defaults live under XDG data (~/.local/share/jig)
+so no external config file is required. The legacy
+~/.agentcockpit/config.json is still honored when present for users
+migrating from agentcockpit.
 """
 
 import json
@@ -9,42 +12,46 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
+from jig.core import paths
 
 AGENTCOCKPIT_CONFIG_FILE = Path.home() / ".agentcockpit" / "config.json"
 _hub_config: dict | None = None
 
 
-def load_hub_config() -> dict:
-    """Load AgentCockpit hub configuration from ~/.agentcockpit/config.json.
+def _defaults() -> dict:
+    return {
+        "hub_dir": str(paths.data_dir()),
+        "workflows_dir": "workflows",
+        "states_dir": "states",
+    }
 
-    Returns config with keys:
-        - hub_dir: Absolute path to agentcockpit project
-        - workflows_dir: Relative path for workflows (default: .claude/workflows)
-        - states_dir: Relative path for states (default: .agentcockpit/states)
+
+def load_hub_config() -> dict:
+    """Load hub configuration.
+
+    Resolution order:
+    1. Cached in-memory config (singleton).
+    2. Legacy ~/.agentcockpit/config.json if it exists.
+    3. XDG defaults (hub_dir=~/.local/share/jig, workflows/, states/).
     """
     global _hub_config
 
     if _hub_config is not None:
         return _hub_config
 
-    if not AGENTCOCKPIT_CONFIG_FILE.exists():
-        raise ValueError(
-            f"AgentCockpit config not found at {AGENTCOCKPIT_CONFIG_FILE}. "
-            "Create it with: {\"hub_dir\": \"/path/to/agentcockpit\"}"
-        )
+    if AGENTCOCKPIT_CONFIG_FILE.exists():
+        try:
+            loaded = json.loads(AGENTCOCKPIT_CONFIG_FILE.read_text())
+        except Exception as e:
+            raise ValueError(f"Error reading AgentCockpit config: {e}")
+        if "hub_dir" not in loaded:
+            raise ValueError("AgentCockpit config missing 'hub_dir' key")
+        _hub_config = loaded
+        _hub_config.setdefault("workflows_dir", ".claude/workflows")
+        _hub_config.setdefault("states_dir", ".agentcockpit/states")
+        return _hub_config
 
-    try:
-        _hub_config = json.loads(AGENTCOCKPIT_CONFIG_FILE.read_text())
-    except Exception as e:
-        raise ValueError(f"Error reading AgentCockpit config: {e}")
-
-    if "hub_dir" not in _hub_config:
-        raise ValueError("AgentCockpit config missing 'hub_dir' key")
-
-    # Set defaults
-    _hub_config.setdefault("workflows_dir", ".claude/workflows")
-    _hub_config.setdefault("states_dir", ".agentcockpit/states")
-
+    _hub_config = _defaults()
     return _hub_config
 
 

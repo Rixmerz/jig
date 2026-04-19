@@ -29,11 +29,27 @@ def jig_version() -> dict[str, str]:
 
 def _register_tools() -> None:
     """Register all tool modules on the MCP instance."""
-    from jig.tools import guide, proxy, snapshot
+    from jig.tools import (
+        config as config_tools,
+        deployment,
+        experience,
+        guide,
+        metadata,
+        patterns,
+        proxy,
+        snapshot,
+        trends,
+    )
 
     proxy.register(mcp)
     snapshot.register(mcp)
     guide.register(mcp)
+    experience.register_experience_tools(mcp)
+    patterns.register_pattern_catalog_tools(mcp)
+    metadata.register_project_metadata_tools(mcp)
+    trends.register_trend_tools(mcp)
+    deployment.register_deployment_tools(mcp)
+    config_tools.register_config_tools(mcp)
 
     # Graph tools (legacy port; register via compatibility shim)
     try:

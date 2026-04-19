@@ -4,6 +4,23 @@ All notable changes to `jig` are documented in this file. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and versioning
 adheres to [SemVer](https://semver.org/).
 
+## [0.1.0a4] — 2026-04-19
+
+### Added
+- Register six previously orphaned tool modules at server startup:
+  `experience_*`, `pattern_*`, `project_metadata`, `trend_report`,
+  `jig_deploy_agents`, `jig_config`. Total tool count climbs from 39
+  to ~48.
+
+### Fixed
+- `hub_config.load_hub_config` no longer raises when
+  `~/.agentcockpit/config.json` is absent. jig now falls back to XDG
+  defaults (`hub_dir=~/.local/share/jig`, `workflows_dir=workflows`,
+  `states_dir=states`), and `graph_list_available` returns an empty
+  list instead of crashing. The legacy agentcockpit file is still
+  honored if present so users migrating from agentcockpit keep their
+  hub layout.
+
 ## [0.1.0a3] — 2026-04-19
 
 ### Fixed
