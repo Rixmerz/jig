@@ -76,10 +76,11 @@ def _cmd_init(args: argparse.Namespace) -> int:
     return run(args)
 
 
-def _cmd_doctor(_args: argparse.Namespace) -> int:
-    """Diagnostics. Implementation lives in jig.cli.doctor (Sprint 5)."""
-    print("[jig] doctor command is not yet implemented. Scheduled for Sprint 5.", file=sys.stderr)
-    return 2
+def _cmd_doctor(args: argparse.Namespace) -> int:
+    """Diagnostics — see jig.cli.doctor for details."""
+    from jig.cli.doctor import run
+
+    return run(args)
 
 
 def main(argv: Sequence[str] | None = None) -> int:
