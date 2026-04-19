@@ -4,6 +4,17 @@ All notable changes to `jig` are documented in this file. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and versioning
 adheres to [SemVer](https://semver.org/).
 
+## [0.1.0a3] — 2026-04-19
+
+### Fixed
+- `tools.graph.register_all` iterated submodules looking for a
+  `register_tools` attribute that never existed — the real functions
+  are `register_graph_core_tools`, `register_graph_management_tools`,
+  `register_graph_builder_tools`. `getattr(..., None)` returned None
+  for all three, silently skipping every graph tool. Now calls each
+  submodule's registrar by its actual name. Pairs with the 0.1.0a2
+  import fix; both were needed to surface the 14 missing tools.
+
 ## [0.1.0a2] — 2026-04-19
 
 ### Fixed
