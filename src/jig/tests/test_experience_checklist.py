@@ -70,12 +70,20 @@ class TestDeriveImplementationChecklist:
     def test_derive_empty_stores(self, tmp_path, monkeypatch):
         """No experience files → returns empty checklist."""
         monkeypatch.setattr(
-            "workflow_manager.experience_memory.GLOBAL_MEMORY_FILE",
+            "jig.engines.experience_memory.GLOBAL_MEMORY_FILE",
             tmp_path / "nonexistent.json",
         )
         monkeypatch.setattr(
-            "workflow_manager.experience_memory.PROJECT_MEMORIES_DIR",
+            "jig.engines.experience_memory.PROJECT_MEMORIES_DIR",
             tmp_path / "projects",
+        )
+        monkeypatch.setattr(
+            "jig.engines.experience_memory._LEGACY_GLOBAL_MEMORY_FILE",
+            tmp_path / "nonexistent_legacy.json",
+        )
+        monkeypatch.setattr(
+            "jig.engines.experience_memory._LEGACY_PROJECT_MEMORIES_DIR",
+            tmp_path / "legacy_projects",
         )
 
         result = derive_implementation_checklist(str(tmp_path))
@@ -95,12 +103,20 @@ class TestDeriveImplementationChecklist:
         _write_memory_json(global_mem, entries)
 
         monkeypatch.setattr(
-            "workflow_manager.experience_memory.GLOBAL_MEMORY_FILE",
+            "jig.engines.experience_memory.GLOBAL_MEMORY_FILE",
             global_mem,
         )
         monkeypatch.setattr(
-            "workflow_manager.experience_memory.PROJECT_MEMORIES_DIR",
+            "jig.engines.experience_memory.PROJECT_MEMORIES_DIR",
             tmp_path / "projects",
+        )
+        monkeypatch.setattr(
+            "jig.engines.experience_memory._LEGACY_GLOBAL_MEMORY_FILE",
+            tmp_path / "nonexistent_legacy.json",
+        )
+        monkeypatch.setattr(
+            "jig.engines.experience_memory._LEGACY_PROJECT_MEMORIES_DIR",
+            tmp_path / "legacy_projects",
         )
 
         result = derive_implementation_checklist(str(tmp_path), task_type="bounded_context")
@@ -122,12 +138,20 @@ class TestDeriveImplementationChecklist:
         _write_memory_json(global_mem, entries)
 
         monkeypatch.setattr(
-            "workflow_manager.experience_memory.GLOBAL_MEMORY_FILE",
+            "jig.engines.experience_memory.GLOBAL_MEMORY_FILE",
             global_mem,
         )
         monkeypatch.setattr(
-            "workflow_manager.experience_memory.PROJECT_MEMORIES_DIR",
+            "jig.engines.experience_memory.PROJECT_MEMORIES_DIR",
             tmp_path / "projects",
+        )
+        monkeypatch.setattr(
+            "jig.engines.experience_memory._LEGACY_GLOBAL_MEMORY_FILE",
+            tmp_path / "nonexistent_legacy.json",
+        )
+        monkeypatch.setattr(
+            "jig.engines.experience_memory._LEGACY_PROJECT_MEMORIES_DIR",
+            tmp_path / "legacy_projects",
         )
 
         result = derive_implementation_checklist(
@@ -152,12 +176,20 @@ class TestDeriveImplementationChecklist:
         _write_memory_json(global_mem, entries)
 
         monkeypatch.setattr(
-            "workflow_manager.experience_memory.GLOBAL_MEMORY_FILE",
+            "jig.engines.experience_memory.GLOBAL_MEMORY_FILE",
             global_mem,
         )
         monkeypatch.setattr(
-            "workflow_manager.experience_memory.PROJECT_MEMORIES_DIR",
+            "jig.engines.experience_memory.PROJECT_MEMORIES_DIR",
             tmp_path / "projects",
+        )
+        monkeypatch.setattr(
+            "jig.engines.experience_memory._LEGACY_GLOBAL_MEMORY_FILE",
+            tmp_path / "nonexistent_legacy.json",
+        )
+        monkeypatch.setattr(
+            "jig.engines.experience_memory._LEGACY_PROJECT_MEMORIES_DIR",
+            tmp_path / "legacy_projects",
         )
 
         result = derive_implementation_checklist(str(tmp_path), task_type="bounded_context")
@@ -174,12 +206,20 @@ class TestDeriveImplementationChecklist:
         _write_memory_json(global_mem, entries)
 
         monkeypatch.setattr(
-            "workflow_manager.experience_memory.GLOBAL_MEMORY_FILE",
+            "jig.engines.experience_memory.GLOBAL_MEMORY_FILE",
             global_mem,
         )
         monkeypatch.setattr(
-            "workflow_manager.experience_memory.PROJECT_MEMORIES_DIR",
+            "jig.engines.experience_memory.PROJECT_MEMORIES_DIR",
             tmp_path / "projects",
+        )
+        monkeypatch.setattr(
+            "jig.engines.experience_memory._LEGACY_GLOBAL_MEMORY_FILE",
+            tmp_path / "nonexistent_legacy.json",
+        )
+        monkeypatch.setattr(
+            "jig.engines.experience_memory._LEGACY_PROJECT_MEMORIES_DIR",
+            tmp_path / "legacy_projects",
         )
 
         result = derive_implementation_checklist(

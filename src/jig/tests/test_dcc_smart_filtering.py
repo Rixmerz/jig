@@ -18,7 +18,7 @@ class TestGetNewFiles:
         failed.returncode = 128
         failed.stdout = ""
 
-        with patch("workflow_manager.dcc_integration.subprocess.run", return_value=failed):
+        with patch("jig.engines.dcc_integration.subprocess.run", return_value=failed):
             result = _get_new_files(str(tmp_path))
 
         assert result == set()
@@ -33,7 +33,7 @@ class TestGetNewFiles:
         diff_result.returncode = 0
         diff_result.stdout = ""
 
-        with patch("workflow_manager.dcc_integration.subprocess.run",
+        with patch("jig.engines.dcc_integration.subprocess.run",
                    side_effect=[status_result, diff_result]):
             result = _get_new_files(str(tmp_path))
 
@@ -49,7 +49,7 @@ class TestGetNewFiles:
         diff_result.returncode = 0
         diff_result.stdout = ""
 
-        with patch("workflow_manager.dcc_integration.subprocess.run",
+        with patch("jig.engines.dcc_integration.subprocess.run",
                    side_effect=[status_result, diff_result]):
             result = _get_new_files(str(tmp_path))
 
@@ -65,7 +65,7 @@ class TestGetNewFiles:
         diff_result.returncode = 0
         diff_result.stdout = "src/added_in_last_commit.py\n"
 
-        with patch("workflow_manager.dcc_integration.subprocess.run",
+        with patch("jig.engines.dcc_integration.subprocess.run",
                    side_effect=[status_result, diff_result]):
             result = _get_new_files(str(tmp_path))
 
@@ -82,7 +82,7 @@ class TestGetNewFiles:
         diff_result.returncode = 0
         diff_result.stdout = ""
 
-        with patch("workflow_manager.dcc_integration.subprocess.run",
+        with patch("jig.engines.dcc_integration.subprocess.run",
                    side_effect=[status_result, diff_result]):
             result = _get_new_files(str(tmp_path))
 
@@ -99,7 +99,7 @@ class TestFilterActionableSmells:
 
     def test_filter_no_smells(self, tmp_path):
         """Empty list returns empty list with 0 suppressed."""
-        with patch("workflow_manager.dcc_integration._get_new_files", return_value=set()):
+        with patch("jig.engines.dcc_integration._get_new_files", return_value=set()):
             result, suppressed = _filter_actionable_smells([], str(tmp_path))
 
         assert result == []
@@ -110,7 +110,7 @@ class TestFilterActionableSmells:
         orphan_file = str(tmp_path / "src" / "brand_new.py")
         smell = {"type": "orphan_file", "file": orphan_file}
 
-        with patch("workflow_manager.dcc_integration._get_new_files",
+        with patch("jig.engines.dcc_integration._get_new_files",
                    return_value={orphan_file}):
             result, suppressed = _filter_actionable_smells([smell], str(tmp_path))
 
@@ -125,7 +125,7 @@ class TestFilterActionableSmells:
 
         smell = {"type": "orphan_file", "file": str(recent_file)}
 
-        with patch("workflow_manager.dcc_integration._get_new_files", return_value=set()):
+        with patch("jig.engines.dcc_integration._get_new_files", return_value=set()):
             # mtime is effectively now — well within 30 minutes
             result, suppressed = _filter_actionable_smells([smell], str(tmp_path))
 
@@ -142,8 +142,8 @@ class TestFilterActionableSmells:
 
         # Simulate old mtime (2 hours ago)
         old_mtime = time.time() - 7200
-        with patch("workflow_manager.dcc_integration._get_new_files", return_value=set()):
-            with patch("workflow_manager.dcc_integration.time.time", return_value=time.time()):
+        with patch("jig.engines.dcc_integration._get_new_files", return_value=set()):
+            with patch("jig.engines.dcc_integration.time.time", return_value=time.time()):
                 with patch("pathlib.Path.stat") as mock_stat:
                     mock_stat.return_value.st_mtime = old_mtime
                     result, suppressed = _filter_actionable_smells([smell], str(tmp_path))
@@ -156,7 +156,7 @@ class TestFilterActionableSmells:
         smell = {"type": "god_file", "file": "src/big.py"}
         baseline = [{"type": "god_file", "file": "src/big.py"}]
 
-        with patch("workflow_manager.dcc_integration._get_new_files", return_value=set()):
+        with patch("jig.engines.dcc_integration._get_new_files", return_value=set()):
             result, suppressed = _filter_actionable_smells(
                 [smell], str(tmp_path), baseline_smells=baseline
             )
@@ -170,7 +170,7 @@ class TestFilterActionableSmells:
         smell_fe = {"type": "feature_envy", "file": new_file}
         smell_gf = {"type": "god_file", "file": new_file}
 
-        with patch("workflow_manager.dcc_integration._get_new_files",
+        with patch("jig.engines.dcc_integration._get_new_files",
                    return_value={new_file}):
             result, suppressed = _filter_actionable_smells(
                 [smell_fe, smell_gf], str(tmp_path)
@@ -207,7 +207,7 @@ class TestFilterActionableSmells:
             {"type": "god_file", "file": new_file1},
         ]
 
-        with patch("workflow_manager.dcc_integration._get_new_files",
+        with patch("jig.engines.dcc_integration._get_new_files",
                    return_value={new_file1, new_file2}):
             result, suppressed = _filter_actionable_smells(smells, str(tmp_path))
 
@@ -225,7 +225,7 @@ class TestFilterActionableSmells:
             {"type": "god_file", "file": None},
         ]
 
-        with patch("workflow_manager.dcc_integration._get_new_files", return_value=set()):
+        with patch("jig.engines.dcc_integration._get_new_files", return_value=set()):
             result, suppressed = _filter_actionable_smells(smells, str(tmp_path))
 
         # Should not raise; all pass through (no file to match on for orphan checks)
@@ -237,7 +237,7 @@ class TestFilterActionableSmells:
         new_file = str(tmp_path / "src" / "new.py")
         smell = {"type": "orphan_file", "source": new_file}
 
-        with patch("workflow_manager.dcc_integration._get_new_files",
+        with patch("jig.engines.dcc_integration._get_new_files",
                    return_value={new_file}):
             result, suppressed = _filter_actionable_smells([smell], str(tmp_path))
 
