@@ -4,6 +4,17 @@ All notable changes to `jig` are documented in this file. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and versioning
 adheres to [SemVer](https://semver.org/).
 
+## [0.1.0a2] — 2026-04-19
+
+### Fixed
+- `tools/*` modules imported engine modules at `jig.X` (pre-port
+  location) instead of `jig.engines.X`, silently dropping 14 tools
+  (`graph_*`, `experience_*`, `pattern_*`, `trend_*`, `project_metadata`,
+  `jig_deploy_agents`, `jig_config`) at server startup. Sessions saw 15
+  tools instead of the expected 29. All top-level and inline imports
+  across `_graph_builder`, `_graph_core`, `_graph_management`, `config`,
+  `deployment`, `experience`, `metadata`, `patterns`, `trends` corrected.
+
 ## [0.1.0a1] — 2026-04-19
 
 First alpha. End-to-end compressed sprint pass from the agentcockpit rewrite.
