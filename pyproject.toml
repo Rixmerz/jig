@@ -1,0 +1,143 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "jig-mcp"
+version = "0.0.1"
+description = "Just-in-time tool discovery and phase-enforced workflows for AI coding agents"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [
+    { name = "Rixmerz" },
+]
+keywords = ["mcp", "claude-code", "workflow", "agent", "code-quality", "embeddings"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: POSIX :: Linux",
+    "Operating System :: MacOS",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Quality Assurance",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+
+dependencies = [
+    "fastmcp>=2.0.0",
+    "fastembed>=0.4.0",
+    "rich>=13.0.0",
+    "numpy>=1.24.0",
+    "pydantic>=2.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.23.0",
+    "pytest-cov>=5.0.0",
+    "hypothesis>=6.0.0",
+    "ruff>=0.6.0",
+    "mypy>=1.10.0",
+    "pre-commit>=3.7.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/Rixmerz/jig"
+Repository = "https://github.com/Rixmerz/jig"
+Issues = "https://github.com/Rixmerz/jig/issues"
+
+[project.scripts]
+jig = "jig.cli.main:main"
+jig-mcp = "jig.cli.main:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/jig"]
+
+[tool.hatch.build.targets.wheel.force-include]
+"src/jig/assets" = "jig/assets"
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "src/jig",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE",
+    "pyproject.toml",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+src = ["src"]
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "B",   # flake8-bugbear
+    "UP",  # pyupgrade
+    "N",   # pep8-naming
+    "SIM", # flake8-simplify
+    "PTH", # flake8-use-pathlib
+    "RUF", # ruff-specific
+]
+ignore = [
+    "E501",  # line too long (handled by formatter)
+]
+
+[tool.ruff.lint.per-file-ignores]
+"src/jig/tests/**" = ["N802", "N803"]
+"tests/**" = ["N802", "N803"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.mypy]
+python_version = "3.10"
+strict = true
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+files = ["src/jig/core", "src/jig/engines"]
+
+[[tool.mypy.overrides]]
+module = [
+    "fastmcp.*",
+    "fastembed.*",
+]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+addopts = "-ra -q --strict-markers"
+testpaths = ["src/jig/tests", "tests"]
+asyncio_mode = "auto"
+markers = [
+    "dcc: tests requiring DCC submodule or vendored DCC code",
+    "slow: slow tests (>1s)",
+    "integration: integration tests (real subprocesses, filesystem)",
+    "e2e: end-to-end tests (full workflow)",
+]
+
+[tool.coverage.run]
+source = ["src/jig"]
+omit = [
+    "src/jig/tests/*",
+    "src/jig/assets/*",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "raise NotImplementedError",
+    "if TYPE_CHECKING:",
+    "@abstractmethod",
+]
