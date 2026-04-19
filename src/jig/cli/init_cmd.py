@@ -147,8 +147,35 @@ def _rough_tool_estimate(_spec: dict) -> int:
     return 25
 
 
+"""Rule files that apply regardless of tech stack. Stack-specific rules
+(python.md, typescript.md, rust.md, ui.md, ...) are deferred to
+`deploy_project_agents`, which copies only what the declared stack needs."""
+BASE_RULES: frozenset[str] = frozenset({
+    "autonomous-strategy.md",
+    "commit-discipline.md",
+    "execution-philosophy.md",
+    "qa.md",
+    "quality-feedback.md",
+    "security-awareness.md",
+    "serena-mcp.md",
+    "sprint-execution.md",
+    "subagent-delegation.md",
+    "workflow-discipline.md",
+})
+
+
 def _copy_assets(claude_dir: Path) -> None:
-    """Copy bundled hooks, rules, commands, workflows into <project>/.claude/."""
+    """Populate <project>/.claude/ with jig's base layer.
+
+    Base means: hooks (all), commands (all), workflows (all), the canonical
+    settings.json pipeline, and the universal rules listed in ``BASE_RULES``.
+
+    Explicitly **not** copied here:
+    - Stack-specific rules (python.md, rust.md, ui.md, ...)  — deferred to
+      ``deploy_project_agents(tech_stack=...)``.
+    - Agents — on-demand via ``deploy_project_agents``.
+    - Skills — on-demand via ``deploy_project_agents`` + ``jig_guide``.
+    """
     claude_dir.mkdir(parents=True, exist_ok=True)
     (claude_dir / "hooks").mkdir(exist_ok=True)
     (claude_dir / "rules").mkdir(exist_ok=True)
@@ -166,11 +193,11 @@ def _copy_assets(claude_dir: Path) -> None:
         if entry.is_file():
             (claude_dir / "hooks" / entry.name).write_bytes(entry.read_bytes())
 
-    # 2. Assets (rules, commands, workflows): copy from jig.assets package data
+    # 2. Commands + workflows: copy wholesale
     import jig.assets as assets_pkg
 
     assets_path = resources.files(assets_pkg)
-    for sub in ("rules", "commands", "workflows"):
+    for sub in ("commands", "workflows"):
         src = assets_path / sub
         if src.is_dir():
             target = claude_dir / sub
@@ -178,14 +205,23 @@ def _copy_assets(claude_dir: Path) -> None:
                 if item.is_file():
                     (target / item.name).write_bytes(item.read_bytes())
 
-    # 3. settings.json from template
+    # 3. Rules: only the universal ones. Stack rules land later via
+    # deploy_project_agents.
+    rules_src = assets_path / "rules"
+    if rules_src.is_dir():
+        for item in rules_src.iterdir():
+            if item.is_file() and item.name in BASE_RULES:
+                (claude_dir / "rules" / item.name).write_bytes(item.read_bytes())
+
+    # 4. settings.json from template
     settings_src = assets_path / "settings.template.json"
     if settings_src.is_file():
         (claude_dir / "settings.json").write_bytes(settings_src.read_bytes())
 
-    # Note: skills and agents are NOT copied — served on-demand via jig_guide
-    # and jig_deploy_agents respectively.
-    print(f"[jig.init] populated {claude_dir}/ (hooks, rules, commands, workflows, settings.json)")
+    print(
+        f"[jig.init] populated {claude_dir}/ "
+        f"(hooks, commands, workflows, {len(BASE_RULES)} base rules, settings.json)"
+    )
 
 
 async def _warmup_all(names: list[str]) -> int:

@@ -4,6 +4,22 @@ All notable changes to `jig` are documented in this file. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and versioning
 adheres to [SemVer](https://semver.org/).
 
+## [0.1.0a13] — 2026-04-19
+
+### Changed
+- `jig init` now copies **only** universal rules (10 files listed in
+  `init_cmd.BASE_RULES`) instead of all 23. Stack-specific rules
+  (`python.md`, `typescript.md`, `rust.md`, `ui.md`, …) stay in the
+  wheel and are dropped into the project by
+  `deploy_project_agents(tech_stack=…)` based on the declared stack.
+- This removes the double-copy that 0.1.0a12 and earlier produced:
+  init would dump every rule into `.claude/rules/` and then
+  `deploy_project_agents` would rewrite a subset on top.
+- Hooks, commands, workflows, and `settings.json` are unchanged —
+  still base-tier, always copied.
+- `init` completion line now reports the rule count so you can see at
+  a glance that the base is 10 files, not 23.
+
 ## [0.1.0a12] — 2026-04-19
 
 ### Added
