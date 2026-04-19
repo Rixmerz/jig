@@ -4,6 +4,29 @@ All notable changes to `jig` are documented in this file. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and versioning
 adheres to [SemVer](https://semver.org/).
 
+## [0.1.0a9] — 2026-04-19
+
+### Changed
+- Snapshots are automatic, not tools. `snapshot_create`, `snapshot_list`,
+  `snapshot_diff`, and `snapshot_restore` moved to the `snapshot`
+  internal proxy (still callable via
+  `execute_mcp_tool("snapshot", "snapshot_<op>", {...})` when you really
+  need them). Top-level surface drops 28 → 24.
+- `snapshot_trigger` hook now fires on `Edit`/`Write` in addition to
+  `Bash`, throttled to one snapshot per 30 s per project. When a new
+  snapshot is captured, the hook emits a PostToolUse
+  `additionalContext` payload listing files changed since the previous
+  snapshot — Claude sees the delta in its next turn without anyone
+  having to ask for it.
+- `settings.template.json` updated so new `jig init` projects pick up
+  both triggers.
+
+### Deferred
+- DCC-powered smell/tension deltas on top of the git-diff summary.
+  Needs a clean `smells_for_files(paths)` API in
+  `engines/dcc_integration.py`; current surface is monolithic. Tracked
+  for 0.2.0 in the ROADMAP.
+
 ## [0.1.0a8] — 2026-04-19
 
 ### Added

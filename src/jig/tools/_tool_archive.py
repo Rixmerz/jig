@@ -78,6 +78,12 @@ ARCHIVE_MAP: dict[str, list[str]] = {
     "session": [
         "set_session",
     ],
+    "snapshot": [
+        "snapshot_create",
+        "snapshot_list",
+        "snapshot_diff",
+        "snapshot_restore",
+    ],
 }
 
 
