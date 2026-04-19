@@ -6,10 +6,6 @@ relevance-ranked retrieval for file-level context injection.
 Storage (XDG):
   - Global: ~/.local/share/jig/experience_memory.json
   - Per-project: ~/.local/share/jig/project_memories/{project}/experience_memory.json
-
-Legacy ~/.workflow-manager/ paths are read as a fallback when the XDG files
-don't exist yet, to keep data from the agentcockpit era accessible until a
-manual migration.
 """
 
 import json
@@ -303,18 +299,7 @@ from jig.core import paths as _paths
 
 GLOBAL_MEMORY_FILE = _paths.data_dir() / "experience_memory.json"
 PROJECT_MEMORIES_DIR = _paths.data_dir() / "project_memories"
-_LEGACY_GLOBAL_MEMORY_FILE = Path.home() / ".workflow-manager" / "experience_memory.json"
-_LEGACY_PROJECT_MEMORIES_DIR = Path.home() / ".workflow-manager" / "project_memories"
 MAX_ENTRIES = 500
-
-
-def _resolve_read_path(primary: Path, legacy: Path) -> Path:
-    """Return the path that should be read. Prefer XDG, fall back to legacy."""
-    if primary.exists():
-        return primary
-    if legacy.exists():
-        return legacy
-    return primary
 
 
 class ExperienceMemoryStore:
@@ -332,28 +317,18 @@ class ExperienceMemoryStore:
             return PROJECT_MEMORIES_DIR / project_name / "experience_memory.json"
         return GLOBAL_MEMORY_FILE
 
-    def _resolve_legacy_path(self, scope: str, project_name: str | None) -> Path:
-        if scope == "project" and project_name:
-            return _LEGACY_PROJECT_MEMORIES_DIR / project_name / "experience_memory.json"
-        return _LEGACY_GLOBAL_MEMORY_FILE
-
     def load(self, scope: str = "global", project_name: str | None = None) -> None:
-        """Load entries from JSON file. Writes always go to the XDG path."""
+        """Load entries from JSON file."""
         self._scope = scope
         self._project_name = project_name
         self._file_path = self._resolve_path(scope, project_name)
 
-        read_path = _resolve_read_path(
-            self._file_path,
-            self._resolve_legacy_path(scope, project_name),
-        )
-
-        if not read_path.exists():
+        if not self._file_path.exists():
             self.entries = []
             return
 
         try:
-            data = json.loads(read_path.read_text())
+            data = json.loads(self._file_path.read_text())
             self.entries = [ExperienceEntry.from_dict(e) for e in data.get("entries", [])]
         except Exception:
             self.entries = []

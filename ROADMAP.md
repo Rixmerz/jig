@@ -5,6 +5,15 @@ This document tracks what lands next. Dates are targets, not commitments.
 
 ## 0.1.0 — stable alpha (next)
 
+- **Sweep bundled assets for agentcockpit refs.** `src/jig/assets/agents/*.md`,
+  `assets/commands/*.md`, `assets/skills/*`, `assets/rules/*.md` still
+  contain hardcoded `/var/home/rixmerz/agentcockpit` paths, `agentcockpit-build`
+  distrobox references, `.workflow-manager/state/...` paths, and
+  descriptions that mention agentcockpit as the host product. These get
+  copied into user projects by `jig init` / `deploy_project_agents`
+  and will confuse first-time users.
+
+
 Close the gaps between "all sprints landed" and "users can actually install it".
 
 - **PyPI publication.** `jig-mcp` name reserved, CI `release.yml` wired for

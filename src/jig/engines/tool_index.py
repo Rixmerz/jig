@@ -94,13 +94,9 @@ STOPWORDS = {
 # ============================================================================
 
 # Global path for learned weights (shared across all projects).
-# Prefer XDG data dir; fall back to legacy ~/.workflow-manager/ for reads.
 from jig.core import paths as _paths
 
-_LEGACY_LEARNED_WEIGHTS_FILE = Path.home() / ".workflow-manager" / "learned_weights.json"
 LEARNED_WEIGHTS_FILE = _paths.data_dir() / "learned_weights.json"
-if not LEARNED_WEIGHTS_FILE.exists() and _LEGACY_LEARNED_WEIGHTS_FILE.exists():
-    LEARNED_WEIGHTS_FILE = _LEGACY_LEARNED_WEIGHTS_FILE
 
 # In-memory cache of learned weights
 # Structure: {"mcp:tool_name": {"keyword": weight, ...}, ...}
@@ -129,7 +125,7 @@ def load_learned_weights() -> dict[str, dict[str, float]]:
             _learned_weights = data.get("weights", {})
             return _learned_weights
         except Exception as e:
-            print(f"[workflow-manager] Warning: failed to load learned weights: {e}", file=sys.stderr)
+            print(f"[jig] Warning: failed to load learned weights: {e}", file=sys.stderr)
             pass
 
     _learned_weights = {}

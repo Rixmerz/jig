@@ -1,4 +1,4 @@
-"""Session management for workflow-manager.
+"""Session management for jig.
 
 Handles project directory resolution and session storage.
 """

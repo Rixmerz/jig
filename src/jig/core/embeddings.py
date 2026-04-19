@@ -1,8 +1,7 @@
 """fastembed-based embedding service.
 
-Singleton client with lazy model loading. Replaces the Ollama-based `OllamaEmbedder`
-used by workflow-manager. The model runs in-process via ONNX Runtime; no daemon,
-no container, no HTTP.
+Singleton client with lazy model loading. The model runs in-process via
+ONNX Runtime; no daemon, no container, no HTTP.
 
 Default model: BAAI/bge-large-en-v1.5 (1024D). Override via `JIG_EMBED_MODEL` env.
 

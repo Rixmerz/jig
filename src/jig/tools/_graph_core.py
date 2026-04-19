@@ -368,12 +368,12 @@ def register_graph_core_tools(mcp):
             try:
                 _collect_experiences_from_dcc(dcc_raw, resolved_dir)
             except Exception as e:
-                print(f"[workflow-manager] Warning: failed to collect DCC experiences: {e}", file=sys.stderr)
+                print(f"[jig] Warning: failed to collect DCC experiences: {e}", file=sys.stderr)
                 pass  # Non-fatal
             try:
                 experience_context = _query_relevant_experiences(dcc_raw, resolved_dir)
             except Exception as e:
-                print(f"[workflow-manager] Warning: failed to query relevant experiences: {e}", file=sys.stderr)
+                print(f"[jig] Warning: failed to query relevant experiences: {e}", file=sys.stderr)
 
         # Enrich with skill recommendations (2A, 2B, 2C)
         skill_recs = None
@@ -1063,7 +1063,7 @@ def register_graph_core_tools(mcp):
         try:
             await _execute_dcc_tool("cube_get_tensions", {"status": "reviewed"}, resolved_dir)
         except Exception as e:
-            print(f"[workflow-manager] Warning: failed to mark tensions as reviewed: {e}", file=sys.stderr)
+            print(f"[jig] Warning: failed to mark tensions as reviewed: {e}", file=sys.stderr)
             pass
 
         return {

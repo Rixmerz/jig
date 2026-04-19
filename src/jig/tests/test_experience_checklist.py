@@ -77,14 +77,6 @@ class TestDeriveImplementationChecklist:
             "jig.engines.experience_memory.PROJECT_MEMORIES_DIR",
             tmp_path / "projects",
         )
-        monkeypatch.setattr(
-            "jig.engines.experience_memory._LEGACY_GLOBAL_MEMORY_FILE",
-            tmp_path / "nonexistent_legacy.json",
-        )
-        monkeypatch.setattr(
-            "jig.engines.experience_memory._LEGACY_PROJECT_MEMORIES_DIR",
-            tmp_path / "legacy_projects",
-        )
 
         result = derive_implementation_checklist(str(tmp_path))
 
@@ -109,14 +101,6 @@ class TestDeriveImplementationChecklist:
         monkeypatch.setattr(
             "jig.engines.experience_memory.PROJECT_MEMORIES_DIR",
             tmp_path / "projects",
-        )
-        monkeypatch.setattr(
-            "jig.engines.experience_memory._LEGACY_GLOBAL_MEMORY_FILE",
-            tmp_path / "nonexistent_legacy.json",
-        )
-        monkeypatch.setattr(
-            "jig.engines.experience_memory._LEGACY_PROJECT_MEMORIES_DIR",
-            tmp_path / "legacy_projects",
         )
 
         result = derive_implementation_checklist(str(tmp_path), task_type="bounded_context")
@@ -144,14 +128,6 @@ class TestDeriveImplementationChecklist:
         monkeypatch.setattr(
             "jig.engines.experience_memory.PROJECT_MEMORIES_DIR",
             tmp_path / "projects",
-        )
-        monkeypatch.setattr(
-            "jig.engines.experience_memory._LEGACY_GLOBAL_MEMORY_FILE",
-            tmp_path / "nonexistent_legacy.json",
-        )
-        monkeypatch.setattr(
-            "jig.engines.experience_memory._LEGACY_PROJECT_MEMORIES_DIR",
-            tmp_path / "legacy_projects",
         )
 
         result = derive_implementation_checklist(
@@ -183,14 +159,6 @@ class TestDeriveImplementationChecklist:
             "jig.engines.experience_memory.PROJECT_MEMORIES_DIR",
             tmp_path / "projects",
         )
-        monkeypatch.setattr(
-            "jig.engines.experience_memory._LEGACY_GLOBAL_MEMORY_FILE",
-            tmp_path / "nonexistent_legacy.json",
-        )
-        monkeypatch.setattr(
-            "jig.engines.experience_memory._LEGACY_PROJECT_MEMORIES_DIR",
-            tmp_path / "legacy_projects",
-        )
 
         result = derive_implementation_checklist(str(tmp_path), task_type="bounded_context")
 
@@ -212,14 +180,6 @@ class TestDeriveImplementationChecklist:
         monkeypatch.setattr(
             "jig.engines.experience_memory.PROJECT_MEMORIES_DIR",
             tmp_path / "projects",
-        )
-        monkeypatch.setattr(
-            "jig.engines.experience_memory._LEGACY_GLOBAL_MEMORY_FILE",
-            tmp_path / "nonexistent_legacy.json",
-        )
-        monkeypatch.setattr(
-            "jig.engines.experience_memory._LEGACY_PROJECT_MEMORIES_DIR",
-            tmp_path / "legacy_projects",
         )
 
         result = derive_implementation_checklist(

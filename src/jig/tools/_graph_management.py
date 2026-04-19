@@ -87,7 +87,7 @@ def register_graph_management_tools(mcp):
                     "type": "graph"
                 })
             except Exception as e:
-                print(f"[workflow-manager] Warning: failed to parse graph YAML '{yaml_file}': {e}", file=sys.stderr)
+                print(f"[jig] Warning: failed to parse graph YAML '{yaml_file}': {e}", file=sys.stderr)
                 graphs.append({
                     "id": graph_name,
                     "name": graph_name,
@@ -171,7 +171,7 @@ def register_graph_management_tools(mcp):
             pm.discover_all()
             pm.save(state_dir)
         except Exception as e:
-            print(f"[workflow-manager] Metadata refresh failed (non-fatal): {e}", file=sys.stderr)
+            print(f"[jig] Metadata refresh failed (non-fatal): {e}", file=sys.stderr)
 
         try:
             from jig.engines.pattern_catalog import PatternCatalog
@@ -179,7 +179,7 @@ def register_graph_management_tools(mcp):
             pc.discover_all()
             pc.save(state_dir)
         except Exception as e:
-            print(f"[workflow-manager] Pattern catalog refresh failed (non-fatal): {e}", file=sys.stderr)
+            print(f"[jig] Pattern catalog refresh failed (non-fatal): {e}", file=sys.stderr)
 
         # Run DCC baseline analysis on start node (non-fatal if DCC unavailable)
         dcc_baseline = None
@@ -190,7 +190,7 @@ def register_graph_management_tools(mcp):
                 dcc_result, _ = await _run_dcc_analysis(analyses, token_budget, resolved_dir)
                 dcc_baseline = dcc_result
         except Exception as e:
-            print(f"[workflow-manager] DCC baseline on activate failed (non-fatal): {e}", file=sys.stderr)
+            print(f"[jig] DCC baseline on activate failed (non-fatal): {e}", file=sys.stderr)
 
         # Store baseline smells for smart filtering in subsequent transitions
         if dcc_baseline:
@@ -198,7 +198,7 @@ def register_graph_management_tools(mcp):
             try:
                 save_graph_state(resolved_dir, state)
             except Exception as e:
-                print(f"[workflow-manager] Failed to save baseline smells (non-fatal): {e}", file=sys.stderr)
+                print(f"[jig] Failed to save baseline smells (non-fatal): {e}", file=sys.stderr)
 
         return {
             "success": True,
@@ -337,7 +337,7 @@ def register_graph_management_tools(mcp):
                     "files": files[:10],
                 })
         except Exception as e:
-            print(f"[workflow-manager] Warning: failed to parse git log for timeline: {e}", file=sys.stderr)
+            print(f"[jig] Warning: failed to parse git log for timeline: {e}", file=sys.stderr)
             pass
 
         # 3. DCC tensions (if available)
@@ -369,7 +369,7 @@ def register_graph_management_tools(mcp):
                                 try:
                                     smell_content = json.loads(item["text"])
                                 except Exception as e:
-                                    print(f"[workflow-manager] Warning: failed to parse smell JSON: {e}", file=sys.stderr)
+                                    print(f"[jig] Warning: failed to parse smell JSON: {e}", file=sys.stderr)
                                     smell_content = raw_smells
                                 break
 
@@ -391,7 +391,7 @@ def register_graph_management_tools(mcp):
                             "file": s.get("file", s.get("source", "?")),
                         })
             except Exception as e:
-                print(f"[workflow-manager] Warning: failed to collect DCC timeline events: {e}", file=sys.stderr)
+                print(f"[jig] Warning: failed to collect DCC timeline events: {e}", file=sys.stderr)
                 pass
 
         # Sort by timestamp (events without timestamps go last)

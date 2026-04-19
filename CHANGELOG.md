@@ -4,6 +4,23 @@ All notable changes to `jig` are documented in this file. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and versioning
 adheres to [SemVer](https://semver.org/).
 
+## [0.1.0a10] — 2026-04-19
+
+### Removed
+- All agentcockpit legacy paths. This is a new project and shouldn't
+  carry a compatibility surface we didn't need yet.
+  - `~/.workflow-manager/` fallback reads in `experience_memory` and
+    `tool_index` — XDG-only now.
+  - `~/.agentcockpit/config.json` read in `hub_config` — XDG defaults
+    only; the only legacy MCP config source kept is `~/.claude.json`
+    because that's where Claude Code stores user-scope MCPs.
+  - `jig migrate` subcommand and `cli/migrate_cmd.py` — no legacy to
+    migrate for a fresh install.
+  - `[workflow-manager]` log prefixes across the codebase renamed to
+    `[jig]`.
+  - Residual docstrings mentioning workflow-manager / its Ollama
+    origin cleaned up.
+
 ## [0.1.0a9] — 2026-04-19
 
 ### Changed

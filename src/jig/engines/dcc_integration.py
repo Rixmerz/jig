@@ -49,7 +49,7 @@ def _summarize_stats(result: dict | None) -> str | None:
             score = content.get("codebase_score", content.get("score", "?"))
             return f"Files: {total}, Grade: {grade}, Score: {score}/100"
     except Exception as e:
-        print(f"[workflow-manager] Warning: failed to summarize stats: {e}", file=sys.stderr)
+        print(f"[jig] Warning: failed to summarize stats: {e}", file=sys.stderr)
         pass
     return str(result)[:200]
 
@@ -85,7 +85,7 @@ def _summarize_smells(result: dict | None) -> str | None:
             summary += ". Use cube_detect_smells(smell_type=...) for details"
             return summary
     except Exception as e:
-        print(f"[workflow-manager] Warning: failed to summarize smells: {e}", file=sys.stderr)
+        print(f"[jig] Warning: failed to summarize smells: {e}", file=sys.stderr)
         pass
     return str(result)[:200]
 
@@ -114,7 +114,7 @@ def _summarize_tensions(result: dict | None) -> str | None:
             parts = [f"{c} {t}" for t, c in sorted(types.items())]
             return f"{total} tensions ({', '.join(parts)})"
     except Exception as e:
-        print(f"[workflow-manager] Warning: failed to summarize tensions: {e}", file=sys.stderr)
+        print(f"[jig] Warning: failed to summarize tensions: {e}", file=sys.stderr)
         pass
     return str(result)[:200]
 
@@ -138,7 +138,7 @@ def _summarize_debt(result: dict | None) -> str | None:
             n_hotspots = len([f for f in hotspots if isinstance(f, dict) and f.get("score", 0) > 60])
             return f"Grade: {grade}, Score: {score}/100, Hotspots: {n_hotspots} files"
     except Exception as e:
-        print(f"[workflow-manager] Warning: failed to summarize debt: {e}", file=sys.stderr)
+        print(f"[jig] Warning: failed to summarize debt: {e}", file=sys.stderr)
         pass
     return str(result)[:200]
 
@@ -283,7 +283,7 @@ def _extract_mcp_content(result: dict | None) -> dict | list | None:
                     return json.loads(item["text"])
         return result
     except Exception as e:
-        print(f"[workflow-manager] Warning: failed to unwrap MCP result: {e}", file=sys.stderr)
+        print(f"[jig] Warning: failed to unwrap MCP result: {e}", file=sys.stderr)
         return result
 
 
@@ -303,7 +303,7 @@ def _extract_tensions(result: dict | None) -> list[dict]:
         if isinstance(content, list):
             return content
     except Exception as e:
-        print(f"[workflow-manager] Warning: failed to extract tensions: {e}", file=sys.stderr)
+        print(f"[jig] Warning: failed to extract tensions: {e}", file=sys.stderr)
         pass
     return []
 
@@ -410,7 +410,7 @@ def _collect_experiences_from_dcc(raw_results: dict, project_dir: str) -> None:
             project_store.save()
             global_store.save()
         except Exception as e:
-            print(f"[workflow-manager] Experience save failed (non-fatal): {e}", file=sys.stderr)
+            print(f"[jig] Experience save failed (non-fatal): {e}", file=sys.stderr)
 
 
 def _collect_gate_blocked(project_dir: str, node_id: str,
@@ -446,7 +446,7 @@ def _collect_gate_blocked(project_dir: str, node_id: str,
         project_store.save()
         global_store.save()
     except Exception as e:
-        print(f"[workflow-manager] Experience gate_blocked save failed: {e}", file=sys.stderr)
+        print(f"[jig] Experience gate_blocked save failed: {e}", file=sys.stderr)
 
 
 def _collect_gate_resolved(project_dir: str, node_id: str, attempts: int) -> None:
@@ -474,7 +474,7 @@ def _collect_gate_resolved(project_dir: str, node_id: str, attempts: int) -> Non
         project_store.save()
         global_store.save()
     except Exception as e:
-        print(f"[workflow-manager] Experience gate_resolved save failed: {e}", file=sys.stderr)
+        print(f"[jig] Experience gate_resolved save failed: {e}", file=sys.stderr)
 
 
 def _query_relevant_experiences(raw_results: dict, project_dir: str) -> list[dict]:
@@ -550,7 +550,7 @@ def _query_relevant_experiences(raw_results: dict, project_dir: str) -> list[dic
             for score, entry in ranked
         ]
     except Exception as e:
-        print(f"[workflow-manager] Warning: _query_relevant_experiences failed: {e}", file=sys.stderr)
+        print(f"[jig] Warning: _query_relevant_experiences failed: {e}", file=sys.stderr)
         return []
 
 
@@ -627,7 +627,7 @@ async def _run_dcc_reindex_incremental(project_dir: str, since_sha: str | None =
                 result = await _execute_dcc_tool("cube_index_file", {"path": file_path}, project_dir)
                 if result:
                     last_result = result
-            print(f"[workflow-manager] DCC incremental reindex: {len(changed_files)} files in {project_dir}", file=sys.stderr)
+            print(f"[jig] DCC incremental reindex: {len(changed_files)} files in {project_dir}", file=sys.stderr)
             return last_result
         else:
             # Full reindex fallback
@@ -636,10 +636,10 @@ async def _run_dcc_reindex_incremental(project_dir: str, since_sha: str | None =
                 "patterns": ["**/*.ts", "**/*.tsx", "**/*.js", "**/*.jsx", "**/*.py", "**/*.rs", "**/*.go", "**/*.css"],
             }, project_dir)
             if result:
-                print(f"[workflow-manager] DCC full reindex: {project_dir}", file=sys.stderr)
+                print(f"[jig] DCC full reindex: {project_dir}", file=sys.stderr)
             return result
     except Exception as e:
-        print(f"[workflow-manager] DCC reindex failed (non-fatal): {e}", file=sys.stderr)
+        print(f"[jig] DCC reindex failed (non-fatal): {e}", file=sys.stderr)
         return None
 
 
@@ -720,7 +720,7 @@ def _summarize_fix_suggestion(result: dict | None) -> str | None:
                 return summary
         return str(content)[:300]
     except Exception as e:
-        print(f"[workflow-manager] Warning: failed to summarize fix suggestion: {e}", file=sys.stderr)
+        print(f"[jig] Warning: failed to summarize fix suggestion: {e}", file=sys.stderr)
         return str(result)[:200]
 
 
@@ -780,7 +780,7 @@ async def _check_tension_gate(node, project_dir: str, state=None) -> dict | None
             try:
                 _collect_gate_resolved(project_dir, node_id, gate_state["attempts"])
             except Exception as e:
-                print(f"[workflow-manager] Warning: failed to collect gate_resolved experience: {e}", file=sys.stderr)
+                print(f"[jig] Warning: failed to collect gate_resolved experience: {e}", file=sys.stderr)
                 pass
         return None
 
@@ -790,7 +790,7 @@ async def _check_tension_gate(node, project_dir: str, state=None) -> dict | None
     try:
         _collect_gate_blocked(project_dir, node_id, blocking, min_severity)
     except Exception as e:
-        print(f"[workflow-manager] Warning: failed to collect gate_blocked experience: {e}", file=sys.stderr)
+        print(f"[jig] Warning: failed to collect gate_blocked experience: {e}", file=sys.stderr)
         pass  # Non-fatal
 
     result = {
@@ -970,7 +970,7 @@ async def _run_impact_preview(node, project_dir: str, entry_sha: str | None = No
                         try:
                             content = json.loads(item["text"])
                         except Exception as e:
-                            print(f"[workflow-manager] Warning: failed to parse wave data JSON: {e}", file=sys.stderr)
+                            print(f"[jig] Warning: failed to parse wave data JSON: {e}", file=sys.stderr)
                             content = wave_data
                         break
 
@@ -1068,7 +1068,7 @@ async def _detect_project_languages(project_dir: str) -> list[str]:
         return [lang for lang, _ in sorted_langs[:3]]
 
     except Exception as e:
-        print(f"[workflow-manager] Warning: _detect_project_languages failed: {e}", file=sys.stderr)
+        print(f"[jig] Warning: _detect_project_languages failed: {e}", file=sys.stderr)
         return []
 
 
@@ -1245,10 +1245,10 @@ def _record_skill_references(skill_recommendations: dict | None, project_dir: st
                 project_store.save()
                 global_store.save()
             except Exception as e:
-                print(f"[workflow-manager] Skill references save failed (non-fatal): {e}", file=sys.stderr)
+                print(f"[jig] Skill references save failed (non-fatal): {e}", file=sys.stderr)
 
     except Exception as e:
-        print(f"[workflow-manager] Warning: _record_skill_references failed: {e}", file=sys.stderr)
+        print(f"[jig] Warning: _record_skill_references failed: {e}", file=sys.stderr)
 
 
 # ============================================================================
@@ -1289,7 +1289,7 @@ def _get_new_files(project_dir: str) -> set[str]:
                         path_part = path_part.split(" -> ")[-1]
                     new_files.add(str(project_path / path_part))
     except Exception as e:
-        print(f"[workflow-manager] Warning: git status failed in _get_new_files: {e}", file=sys.stderr)
+        print(f"[jig] Warning: git status failed in _get_new_files: {e}", file=sys.stderr)
 
     # 2. Files added in the last commit (HEAD vs HEAD~1)
     try:
@@ -1303,7 +1303,7 @@ def _get_new_files(project_dir: str) -> set[str]:
                 if line:
                     new_files.add(str(project_path / line))
     except Exception as e:
-        print(f"[workflow-manager] Warning: git diff HEAD~1 failed in _get_new_files: {e}", file=sys.stderr)
+        print(f"[jig] Warning: git diff HEAD~1 failed in _get_new_files: {e}", file=sys.stderr)
 
     return new_files
 
@@ -1349,7 +1349,7 @@ def _filter_actionable_smells(
     try:
         new_files = _get_new_files(project_dir)
     except Exception as e:
-        print(f"[workflow-manager] Warning: _get_new_files failed: {e}", file=sys.stderr)
+        print(f"[jig] Warning: _get_new_files failed: {e}", file=sys.stderr)
         new_files = set()
 
     now_real = time.time()
@@ -1466,7 +1466,7 @@ async def _run_mid_phase_check(
             if isinstance(content, dict):
                 smell_list = content.get("smells", [])
         except Exception as e:
-            print(f"[workflow-manager] Warning: failed to extract smell list in mid-phase: {e}", file=sys.stderr)
+            print(f"[jig] Warning: failed to extract smell list in mid-phase: {e}", file=sys.stderr)
 
         if smell_list:
             filtered_smells, noise_filtered = _filter_actionable_smells(
@@ -1581,7 +1581,7 @@ async def _run_pre_transition_check(
             if isinstance(content, dict):
                 debt_grade = content.get("grade", "?")
         except Exception as e:
-            print(f"[workflow-manager] Warning: failed to parse debt grade: {e}", file=sys.stderr)
+            print(f"[jig] Warning: failed to parse debt grade: {e}", file=sys.stderr)
 
     # Get critical smells — fetch full list so we can apply smart filtering
     raw_smells = await _execute_dcc_tool(
@@ -1612,7 +1612,7 @@ async def _run_pre_transition_check(
                     by_severity = content.get("by_severity", {})
                     critical_smells_count = by_severity.get("critical", content.get("total_smells", 0))
         except Exception as e:
-            print(f"[workflow-manager] Warning: failed to parse critical smells: {e}", file=sys.stderr)
+            print(f"[jig] Warning: failed to parse critical smells: {e}", file=sys.stderr)
 
     # Security gate check (if configured)
     security_gate_config = pre_check.get("security_gate", {})
