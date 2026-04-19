@@ -15,6 +15,14 @@ adheres to [SemVer](https://semver.org/).
 - Matching pattern recognised: bare package names stay bare; anything
   starting with `git+`, `.`, or containing `/` is treated as a source
   spec and wrapped with `uvx --from`.
+- `jig migrate` subcommand: moves legacy `~/.workflow-manager/*` files
+  (experience_memory.json, project_memories/, learned_weights.json)
+  into `~/.local/share/jig/`. Never overwrites existing XDG data.
+  `--dry-run` previews; `--delete-legacy` removes the source tree
+  after a clean run (refuses when any XDG path already existed).
+  Five full docs landed under `docs/` (architecture, tools, init,
+  embeddings, proxy) — the README's previously-dead links now
+  resolve.
 
 ### Fixed
 - Test suite fully green (150/150). Legacy `workflow_manager.*` imports

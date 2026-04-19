@@ -68,6 +68,22 @@ def _build_parser() -> argparse.ArgumentParser:
     doctor = sub.add_parser("doctor", help="Run diagnostics on the jig installation")
     doctor.set_defaults(func=_cmd_doctor)
 
+    migrate = sub.add_parser(
+        "migrate",
+        help="Move legacy ~/.workflow-manager/ data into the XDG layout",
+    )
+    migrate.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Print the migration plan without touching anything",
+    )
+    migrate.add_argument(
+        "--delete-legacy",
+        action="store_true",
+        help="Remove ~/.workflow-manager/ after a clean migration (refuses if any XDG paths already existed)",
+    )
+    migrate.set_defaults(func=_cmd_migrate)
+
     return parser
 
 
@@ -82,6 +98,13 @@ def _cmd_serve(_args: argparse.Namespace) -> int:
 def _cmd_init(args: argparse.Namespace) -> int:
     """Scaffold project — see jig.cli.init_cmd for details."""
     from jig.cli.init_cmd import run
+
+    return run(args)
+
+
+def _cmd_migrate(args: argparse.Namespace) -> int:
+    """Move legacy agentcockpit data into XDG — see jig.cli.migrate_cmd."""
+    from jig.cli.migrate_cmd import run
 
     return run(args)
 
