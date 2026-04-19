@@ -393,56 +393,37 @@ class PatternCatalog:
     def _rank_by_embedding(self, candidates: list[Path], description: str) -> list[Path]:
         """Re-rank file candidates by semantic similarity to a description.
 
-        Falls back to original order if Ollama is unavailable.
+        Uses fastembed in-process. Falls back to original order if unavailable.
         """
         try:
-            import urllib.request
-            import json as _json
+            from jig.core.embeddings import get_embedder
 
-            # Embed the description
-            payload = _json.dumps({"model": "nomic-embed-text", "input": description}).encode()
-            req = urllib.request.Request(
-                "http://localhost:11434/api/embed",
-                data=payload,
-                headers={"Content-Type": "application/json"},
-            )
-            with urllib.request.urlopen(req, timeout=3) as resp:
-                data = _json.loads(resp.read())
-                query_emb = data.get("embeddings", [None])[0]
+            emb = get_embedder()
+            if not emb.available:
+                return candidates
 
+            query_emb = emb.embed_one(description)
             if not query_emb:
                 return candidates
 
-            # Embed each candidate's first 500 chars
-            scored: list[tuple[Path, float]] = []
-            for path in candidates[:10]:  # Cap at 10 to avoid timeout
-                try:
-                    content = path.read_text(encoding="utf-8", errors="replace")[:500]
-                    payload = _json.dumps({"model": "nomic-embed-text", "input": content}).encode()
-                    req = urllib.request.Request(
-                        "http://localhost:11434/api/embed",
-                        data=payload,
-                        headers={"Content-Type": "application/json"},
-                    )
-                    with urllib.request.urlopen(req, timeout=2) as resp:
-                        data = _json.loads(resp.read())
-                        cand_emb = data.get("embeddings", [None])[0]
+            # Cap at 10 to avoid pathological latency on large candidate lists
+            subset = candidates[:10]
+            contents = [
+                p.read_text(encoding="utf-8", errors="replace")[:500] for p in subset
+            ]
+            cand_embs = emb.embed_many(contents)
+            if cand_embs is None:
+                return candidates
 
-                    if cand_emb and query_emb:
-                        # Cosine similarity
-                        dot = sum(a * b for a, b in zip(query_emb, cand_emb))
-                        norm_q = sum(a * a for a in query_emb) ** 0.5
-                        norm_c = sum(a * a for a in cand_emb) ** 0.5
-                        sim = dot / (norm_q * norm_c) if norm_q and norm_c else 0.0
-                        scored.append((path, sim))
-                    else:
-                        scored.append((path, 0.0))
-                except Exception:
-                    scored.append((path, 0.0))
+            def _cos(a: list[float], b: list[float]) -> float:
+                dot = sum(x * y for x, y in zip(a, b, strict=True))
+                na = sum(x * x for x in a) ** 0.5
+                nb = sum(x * x for x in b) ** 0.5
+                return dot / (na * nb) if na and nb else 0.0
 
-            # Sort by similarity descending
+            scored = list(zip(subset, (_cos(query_emb, c) for c in cand_embs), strict=True))
             scored.sort(key=lambda x: x[1], reverse=True)
-            return [p for p, _ in scored]
+            return [p for p, _ in scored] + list(candidates[10:])
         except Exception:
             return candidates  # Fallback to original order
 

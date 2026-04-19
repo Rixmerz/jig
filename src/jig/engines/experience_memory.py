@@ -263,16 +263,19 @@ def compute_relevance(entry: ExperienceEntry, target_path: str,
     # Try embedding-based similarity (replaces keyword_score if available)
     embedding_score = None
     try:
-        from deltacodecube.embeddings.cache import EmbeddingCache
-        cache = EmbeddingCache()
-        entry_emb = cache.get(entry.id, "experience")
-        if entry_emb is not None and query_embedding is not None:
-            import numpy as np
-            na = np.linalg.norm(entry_emb)
-            nb = np.linalg.norm(query_embedding)
-            if na > 0 and nb > 0:
-                embedding_score = float(np.dot(entry_emb, query_embedding) / (na * nb))
-        cache.close()
+        from jig.core.embed_cache import list_tools as _list_tools
+
+        if query_embedding is not None:
+            for rec in _list_tools(mcp_name="_experience"):
+                if rec.tool_name == entry.id:
+                    import numpy as np
+                    a = np.asarray(rec.embedding)
+                    b = np.asarray(query_embedding)
+                    na = float(np.linalg.norm(a))
+                    nb = float(np.linalg.norm(b))
+                    if na > 0 and nb > 0:
+                        embedding_score = float(np.dot(a, b) / (na * nb))
+                    break
     except Exception:
         pass
 
@@ -388,21 +391,28 @@ class ExperienceMemoryStore:
         self.entries.append(entry)
         self.save()
 
-        # Cache embedding for semantic search
+        # Cache embedding for semantic search (fastembed, in-process)
         try:
-            from deltacodecube.embeddings.client import OllamaEmbedder
-            from deltacodecube.embeddings.cache import EmbeddingCache
+            from jig.core.embeddings import get_embedder
 
             embed_text = f"{entry.description} {entry.resolution} {' '.join(entry.keywords)}"
-            embedder = OllamaEmbedder()
-            embedding = embedder.embed(embed_text)
-            if embedding:
-                cache = EmbeddingCache()
-                content_hash = EmbeddingCache.content_hash(embed_text)
-                cache.put(entry.id, "experience", content_hash, embedding)
-                cache.close()
+            emb = get_embedder()
+            if emb.available:
+                vec = emb.embed_one(embed_text)
+                if vec:
+                    # Piggyback on the tool embedding cache under a pseudo-mcp name
+                    from jig.core.embed_cache import upsert_tools
+
+                    upsert_tools(
+                        mcp_name="_experience",
+                        tools=[{
+                            "name": entry.id,
+                            "description": embed_text,
+                            "inputSchema": {"properties": {}},
+                        }],
+                    )
         except Exception:
-            pass  # Ollama unavailable — skip embedding
+            pass  # Embedding backend unavailable — skip silently
 
         return entry
 
@@ -620,45 +630,17 @@ def derive_implementation_checklist(
 
     _entry_scores: dict[int, float] = {}
     try:
-        import urllib.request
-        payload = json.dumps({"model": "nomic-embed-text", "input": _task_desc}).encode()
-        req = urllib.request.Request(
-            "http://localhost:11434/api/embed",
-            data=payload,
-            headers={"Content-Type": "application/json"},
-        )
-        with urllib.request.urlopen(req, timeout=3) as resp:
-            data = json.loads(resp.read())
-            _query_emb = data.get("embeddings", [None])[0]
+        # In-process embedding via fastembed + jig's global tool cache
+        from jig.core.embed_cache import search as _cache_search
 
-        if _query_emb:
-            import sqlite3
-            db_path = Path.home() / ".deltacodecube" / "embeddings.db"
-            if db_path.exists():
-                conn = sqlite3.connect(str(db_path), timeout=2)
-                rows = conn.execute(
-                    "SELECT id, embedding FROM embeddings WHERE source='experience'"
-                ).fetchall()
-                conn.close()
+        matches = _cache_search(_task_desc, top_k=50, mcp_name="_experience")
+        _score_by_id = {rec.tool_name: score for rec, score in matches}
 
-                _emb_cache: dict[str, list[float]] = {}
-                for row_id, emb_json in rows:
-                    try:
-                        _emb_cache[row_id] = json.loads(emb_json)
-                    except Exception:
-                        pass
-
-                for i, entry in enumerate(all_entries):
-                    _hash = getattr(entry, "commit_hash", "") or entry.id[:12] if entry.id else ""
-                    entry_id = f"{_hash}-{entry.file_pattern}"
-                    if entry_id in _emb_cache:
-                        emb = _emb_cache[entry_id]
-                        # Cosine similarity (no numpy)
-                        dot = sum(a * b for a, b in zip(_query_emb, emb))
-                        nq = sum(a * a for a in _query_emb) ** 0.5
-                        ne = sum(a * a for a in emb) ** 0.5
-                        sim = dot / (nq * ne) if nq and ne else 0.0
-                        _entry_scores[i] = sim
+        for i, entry in enumerate(all_entries):
+            _hash = getattr(entry, "commit_hash", "") or (entry.id[:12] if entry.id else "")
+            entry_id = entry.id or f"{_hash}-{entry.file_pattern}"
+            if entry_id in _score_by_id:
+                _entry_scores[i] = _score_by_id[entry_id]
     except Exception:
         pass  # Fall back to frequency-only
 
