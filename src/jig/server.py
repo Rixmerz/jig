@@ -28,8 +28,13 @@ def jig_version() -> dict[str, str]:
 
 
 def _register_tools() -> None:
-    """Register all tool modules on the MCP instance."""
+    """Register all tool modules on the MCP instance, then archive the
+    seldom-used ones to internal proxies per ``_tool_archive.ARCHIVE_MAP``.
+    """
+    import asyncio
+
     from jig.tools import (
+        _tool_archive,
         config as config_tools,
         deployment,
         experience,
@@ -51,13 +56,23 @@ def _register_tools() -> None:
     deployment.register_deployment_tools(mcp)
     config_tools.register_config_tools(mcp)
 
-    # Graph tools (legacy port; register via compatibility shim)
     try:
         from jig.tools.graph import register_all as register_graph
 
         register_graph(mcp)
     except Exception as e:  # pragma: no cover
         log.warning("[jig.server] failed to register graph tools: %s", e)
+
+    try:
+        moved = asyncio.run(_tool_archive.archive_all(mcp))
+        total = sum(moved.values())
+        log.info(
+            "[jig.server] archived %d tools to internal proxies: %s",
+            total,
+            moved,
+        )
+    except Exception as e:  # pragma: no cover
+        log.warning("[jig.server] tool archival failed: %s", e)
 
 
 async def _warmup_embed_model() -> None:

@@ -4,6 +4,26 @@ All notable changes to `jig` are documented in this file. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and versioning
 adheres to [SemVer](https://semver.org/).
 
+## [0.1.0a7] — 2026-04-19
+
+### Changed
+- Generalize the internal-proxy archive pattern beyond graph. A single
+  pass in `server._register_tools` (via `tools/_tool_archive.py`) moves
+  tools listed in `ARCHIVE_MAP` to their domain's internal proxy:
+  - `experience`: `experience_list`, `experience_derive_checklist`
+  - `pattern`: `pattern_catalog_generate`
+  - `metadata`: `project_metadata_refresh`
+  - `trend`: `trend_record_snapshot`, `trend_get_data`
+  - `workflow`: `workflow_set_enabled`, `workflow_set_dcc_injection`
+  - `deploy`: `deploy_project_agents`
+  - `session`: `set_session`
+- The per-graph splitter (`_graph_split.py`) is gone; its 18 tools are
+  now part of `ARCHIVE_MAP["graph"]`. Replaced by `_tool_archive.py`.
+- Tool count on jig's top-level surface drops from 38 to **29**, hitting
+  the original plan's target. All archived tools remain callable via
+  `execute_mcp_tool("<domain>", "<tool>", {...})` and discoverable via
+  `proxy_tools_search`.
+
 ## [0.1.0a6] — 2026-04-19
 
 ### Added
