@@ -28,8 +28,21 @@ def _get_or_create_builder(builder_id: str) -> dict:
     return _graph_builders[builder_id]
 
 
+def _infer_terminal_nodes(builder: dict) -> set[str]:
+    """A node with no outgoing edge is treated as terminal (is_end=True) on
+    preview/save. Saves the author from having to flag it explicitly."""
+    with_outgoing = {e["from"] for e in builder["edges"]}
+    return {n["id"] for n in builder["nodes"] if n["id"] not in with_outgoing}
+
+
 def _generate_graph_yaml(builder: dict) -> str:
-    """Generate YAML content from builder data."""
+    """Generate YAML content from builder data.
+
+    Terminal nodes (no outgoing edges) are flagged ``is_end: true``
+    automatically, overriding whatever the author set, so the resulting
+    YAML always passes validation without manual bookkeeping.
+    """
+    terminals = _infer_terminal_nodes(builder)
     lines = []
 
     # Metadata
@@ -48,7 +61,7 @@ def _generate_graph_yaml(builder: dict) -> str:
 
         if node.get("is_start"):
             lines.append("    is_start: true")
-        if node.get("is_end"):
+        if node.get("is_end") or node["id"] in terminals:
             lines.append("    is_end: true")
 
         # MCPs enabled
@@ -347,10 +360,25 @@ def register_graph_builder_tools(mcp):
             "priority": priority
         }
 
-        if condition_type == "tool" and condition_tool:
+        if condition_type == "tool":
+            if not condition_tool:
+                return {
+                    "success": False,
+                    "message": "condition_type='tool' requires condition_tool to be set",
+                }
             edge["condition_tool"] = condition_tool
-        elif condition_type == "phrase" and condition_phrases:
+        elif condition_type == "phrase":
+            if not condition_phrases:
+                return {
+                    "success": False,
+                    "message": "condition_type='phrase' requires condition_phrases (non-empty list)",
+                }
             edge["condition_phrases"] = condition_phrases
+        elif condition_type != "always":
+            return {
+                "success": False,
+                "message": f"condition_type must be 'always', 'tool', or 'phrase' (got '{condition_type}')",
+            }
 
         builder["edges"].append(edge)
 
@@ -360,6 +388,131 @@ def register_graph_builder_tools(mcp):
             "edge_id": edge_id,
             "edge_count": len(builder["edges"]),
             "message": f"Edge '{from_node}' -> '{to_node}' added"
+        }
+
+    @mcp.tool()
+    def graph_builder_update_node(
+        builder_id: str,
+        node_id: str,
+        name: str | None = None,
+        is_start: bool | None = None,
+        is_end: bool | None = None,
+        mcps_enabled: list[str] | None = None,
+        tools_blocked: list[str] | None = None,
+        max_visits: int | None = None,
+        prompt_injection: str | None = None,
+        node_type: str | None = None,
+        tasks: list[dict] | None = None,
+    ) -> dict:
+        # destructiveHint: False
+        """Update fields on an existing node. Only provided kwargs are patched.
+
+        Use this instead of adding a new node when you need to change
+        a property (for example, flipping ``is_end``, retargeting
+        ``tools_blocked``, or editing ``prompt_injection``) on an
+        already-added node. Pass ``None`` for fields you want to leave
+        untouched.
+
+        Returns:
+            {"success": bool, "patched": list[str], ...}
+        """
+        if builder_id not in _graph_builders:
+            return {
+                "success": False,
+                "message": f"Builder '{builder_id}' not found",
+            }
+        builder = _graph_builders[builder_id]
+        node = next((n for n in builder["nodes"] if n["id"] == node_id), None)
+        if node is None:
+            return {
+                "success": False,
+                "message": f"Node '{node_id}' not found in builder '{builder_id}'",
+                "available_nodes": [n["id"] for n in builder["nodes"]],
+            }
+        patched: list[str] = []
+        for key, val in (
+            ("name", name),
+            ("is_start", is_start),
+            ("is_end", is_end),
+            ("mcps_enabled", mcps_enabled),
+            ("tools_blocked", tools_blocked),
+            ("max_visits", max_visits),
+            ("prompt_injection", prompt_injection),
+            ("node_type", node_type),
+            ("tasks", tasks),
+        ):
+            if val is not None:
+                node[key] = val
+                patched.append(key)
+        return {
+            "success": True,
+            "builder_id": builder_id,
+            "node_id": node_id,
+            "patched": patched,
+            "message": f"Node '{node_id}' patched" if patched else "no-op (nothing to patch)",
+        }
+
+    @mcp.tool()
+    def graph_builder_update_edge(
+        builder_id: str,
+        edge_id: str,
+        from_node: str | None = None,
+        to_node: str | None = None,
+        condition_type: str | None = None,
+        condition_tool: str | None = None,
+        condition_phrases: list[str] | None = None,
+        priority: int | None = None,
+    ) -> dict:
+        # destructiveHint: False
+        """Update fields on an existing edge. Only provided kwargs are patched.
+
+        Sibling of ``graph_builder_update_node`` for edges. Useful to
+        flip an edge from ``type: always`` to ``type: phrase`` after
+        the fact without having to recreate it.
+        """
+        if builder_id not in _graph_builders:
+            return {
+                "success": False,
+                "message": f"Builder '{builder_id}' not found",
+            }
+        builder = _graph_builders[builder_id]
+        edge = next((e for e in builder["edges"] if e["id"] == edge_id), None)
+        if edge is None:
+            return {
+                "success": False,
+                "message": f"Edge '{edge_id}' not found in builder '{builder_id}'",
+                "available_edges": [e["id"] for e in builder["edges"]],
+            }
+        node_ids = {n["id"] for n in builder["nodes"]}
+        if from_node is not None:
+            if from_node not in node_ids:
+                return {"success": False, "message": f"from_node '{from_node}' not found"}
+            edge["from"] = from_node
+        if to_node is not None:
+            if to_node not in node_ids:
+                return {"success": False, "message": f"to_node '{to_node}' not found"}
+            edge["to"] = to_node
+        if condition_type is not None:
+            edge["condition_type"] = condition_type
+            # Clear opposite fields when switching type
+            if condition_type == "tool":
+                edge.pop("condition_phrases", None)
+            elif condition_type == "phrase":
+                edge.pop("condition_tool", None)
+            elif condition_type == "always":
+                edge.pop("condition_tool", None)
+                edge.pop("condition_phrases", None)
+        if condition_tool is not None:
+            edge["condition_tool"] = condition_tool
+        if condition_phrases is not None:
+            edge["condition_phrases"] = condition_phrases
+        if priority is not None:
+            edge["priority"] = priority
+        return {
+            "success": True,
+            "builder_id": builder_id,
+            "edge_id": edge_id,
+            "message": f"Edge '{edge_id}' patched",
         }
 
     @mcp.tool()

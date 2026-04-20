@@ -38,6 +38,8 @@ ARCHIVE_MAP: dict[str, list[str]] = {
         "graph_acknowledge_tensions",
         "graph_builder_add_edge",
         "graph_builder_add_node",
+        "graph_builder_update_edge",
+        "graph_builder_update_node",
         "graph_builder_create",
         "graph_builder_delete",
         "graph_builder_list",

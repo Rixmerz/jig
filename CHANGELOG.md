@@ -4,6 +4,33 @@ All notable changes to `jig` are documented in this file. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and versioning
 adheres to [SemVer](https://semver.org/).
 
+## [0.1.0a18] — 2026-04-20
+
+### Added
+- `graph_builder_update_node(builder_id, node_id, **fields)` —
+  idempotent patch of an existing node. Only provided kwargs are
+  written; the rest are left alone. Removes the "delete the whole
+  builder to flip one flag" friction.
+- `graph_builder_update_edge(builder_id, edge_id, **fields)` —
+  sibling for edges. Flipping an edge from `type: always` to
+  `type: phrase` no longer requires `add_edge` with a new id + `delete`
+  the old one. When switching `condition_type`, the newly-irrelevant
+  `condition_tool` / `condition_phrases` fields are cleared so the
+  rendered YAML matches the new type.
+
+### Changed
+- `_generate_graph_yaml` auto-infers `is_end: true` for every node
+  with no outgoing edge. Saves the author from having to flag
+  terminal nodes explicitly, and the generated YAML always passes
+  validation without a round-trip edit.
+- `graph_builder_add_edge` validates `condition_type` strictly:
+  `phrase` without `condition_phrases` → error; `tool` without
+  `condition_tool` → error; unknown type → error. Previously the
+  irrelevant fields were silently dropped, producing an `always`
+  edge the author didn't intend.
+- Both new update tools archived under the `graph` internal proxy,
+  so surface count stays at 26.
+
 ## [0.1.0a17] — 2026-04-19
 
 ### Added
