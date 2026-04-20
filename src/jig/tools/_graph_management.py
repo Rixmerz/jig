@@ -70,7 +70,17 @@ def register_graph_management_tools(mcp):
                 name = graph_name
                 description = ""
                 version = ""
+                # Only scan inside the top-level `metadata:` block — the
+                # nodes: / edges: sections also have name/description
+                # fields and would otherwise overwrite the graph's.
+                in_metadata = False
                 for line in content.split('\n'):
+                    # Top-level section header (no leading whitespace)
+                    if line and not line[0].isspace():
+                        in_metadata = line.strip().startswith('metadata:')
+                        continue
+                    if not in_metadata:
+                        continue
                     stripped = line.strip()
                     if stripped.startswith('name:'):
                         name = stripped.split(':', 1)[1].strip().strip('"').strip("'")

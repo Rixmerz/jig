@@ -4,6 +4,38 @@ All notable changes to `jig` are documented in this file. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and versioning
 adheres to [SemVer](https://semver.org/).
 
+## [0.1.0a19] — 2026-04-20
+
+### Fixed
+- **B2 (critical):** `tools_blocked` enforcement was silently neutralised
+  when LLMs passed the list as a JSON string (e.g.
+  `"[\\"Edit\\", \\"Write\\"]"`) instead of a real array. FastMCP's
+  pydantic validation runs at the surface-tool boundary, but archived
+  tools are dispatched by `handler.fn(**args)` which skips it — so the
+  stringified list made it into `_generate_graph_yaml`, got iterated
+  character-by-character, and produced a useless block list.
+  `internal_proxy.invoke` now coerces args against
+  `handler.input_schema`: fields typed `array` receive `json.loads`
+  when given a string, falling back to `[value]` if parse fails;
+  fields typed `object` get the same treatment. Every archived tool
+  across the 7 internal proxies now sees validated, correctly-typed
+  kwargs.
+- **B7 (cosmetic):** `_parse_agent_frontmatter` now handles YAML block
+  scalars (`description: |` followed by indented continuation lines)
+  and inline/block lists. `workflow-executor.md` and
+  `codebase-analyst.md` no longer end up with `description: "|"` in
+  their deployed frontmatter — the full prose comes through.
+- **B1 (cosmetic):** `graph_list_available` was scanning the entire
+  YAML for `name:` / `description:` lines and picking up values from
+  whichever node happened to come last. Scan now restricted to the
+  top-level `metadata:` block.
+- **B12 (medium):** `proxy_reconnect` and `proxy_refresh_embeddings`
+  crashed when the underlying subprocess failed to start or the MCP
+  handshake raised. Both wrap the connect/start/handshake in
+  try/except now, log the failure to stderr, and return a structured
+  result (`False` / `0`) so the caller never receives a bare
+  exception.
+
 ## [0.1.0a18] — 2026-04-20
 
 ### Added

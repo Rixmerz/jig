@@ -93,7 +93,11 @@ _CORE_SKILLS = ["jig-methodology", "qa-patterns", "testing", "validation", "debu
 def _parse_agent_frontmatter(content: str) -> tuple[dict, str]:
     """Parse YAML-like frontmatter from an agent .md file.
 
-    Returns (frontmatter_dict, body_after_frontmatter).
+    Returns (frontmatter_dict, body_after_frontmatter). Supports the
+    block scalar form (``description: |`` followed by indented lines)
+    so agents authored with multi-line descriptions don't end up with
+    ``description: "|"`` in their deployed copy. Continuation lines
+    are joined with a single space; trailing blanks trimmed.
     """
     if not content.startswith("---"):
         return {}, content
@@ -102,11 +106,64 @@ def _parse_agent_frontmatter(content: str) -> tuple[dict, str]:
     fm_text = content[3:end_idx].strip()
     body = content[end_idx + 3:].lstrip("\n")
 
-    fm = {}
-    for line in fm_text.splitlines():
-        if ":" in line:
-            key, _, val = line.partition(":")
-            fm[key.strip()] = val.strip()
+    fm: dict[str, str | list[str]] = {}
+    lines = fm_text.splitlines()
+    i = 0
+    while i < len(lines):
+        line = lines[i]
+        stripped = line.strip()
+        if not stripped or ":" not in stripped:
+            i += 1
+            continue
+        key, _, val = stripped.partition(":")
+        key = key.strip()
+        val = val.strip()
+        # Block scalar: description: |  (or >)
+        if val in ("|", ">"):
+            # Grab the indented block that follows.
+            i += 1
+            block: list[str] = []
+            while i < len(lines):
+                nxt = lines[i]
+                if not nxt.strip():
+                    block.append("")
+                    i += 1
+                    continue
+                # An unindented line (same level as key) ends the block.
+                if nxt[:1] not in (" ", "\t"):
+                    break
+                block.append(nxt.strip())
+                i += 1
+            joined = " ".join(seg for seg in block if seg).strip()
+            fm[key] = joined
+            continue
+        # Inline list: foo: [a, b, c]
+        if val.startswith("[") and val.endswith("]"):
+            inner = val[1:-1].strip()
+            if inner:
+                fm[key] = [p.strip().strip('"').strip("'") for p in inner.split(",") if p.strip()]
+            else:
+                fm[key] = []
+            i += 1
+            continue
+        # Block list: next lines start with "- "
+        if not val and i + 1 < len(lines) and lines[i + 1].lstrip().startswith("- "):
+            items: list[str] = []
+            i += 1
+            while i < len(lines):
+                n = lines[i]
+                if not n.strip():
+                    i += 1
+                    continue
+                if n.lstrip().startswith("- "):
+                    items.append(n.strip()[2:].strip().strip('"').strip("'"))
+                    i += 1
+                    continue
+                break
+            fm[key] = items
+            continue
+        fm[key] = val
+        i += 1
     return fm, body
 
 

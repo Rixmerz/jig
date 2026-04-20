@@ -434,23 +434,52 @@ async def proxy_unregister(name: str) -> bool:
 
 
 async def proxy_refresh_embeddings(name: str) -> int:
-    """(Re)embed all tools for this proxy. Returns count embedded."""
-    conn = await get_mcp_connection(name)
+    """(Re)embed all tools for this proxy. Returns count embedded.
+
+    Returns 0 (and swallows the failure) if the subprocess can't be
+    started or the MCP handshake fails. Surfaced errors are logged to
+    stderr so the caller isn't left wondering why the count is zero.
+    """
+    try:
+        conn = await get_mcp_connection(name)
+    except Exception as e:
+        print(f"[jig.proxy] refresh {name}: connect failed: {e}", file=sys.stderr)
+        return 0
     if conn is None:
         return 0
-    tools = await conn.list_tools()
+    try:
+        tools = await conn.list_tools()
+    except Exception as e:
+        print(f"[jig.proxy] refresh {name}: list_tools failed: {e}", file=sys.stderr)
+        return 0
     if not tools:
         return 0
-    return upsert_tools(name, tools)
+    try:
+        return upsert_tools(name, tools)
+    except Exception as e:
+        print(f"[jig.proxy] refresh {name}: embed upsert failed: {e}", file=sys.stderr)
+        return 0
 
 
 async def proxy_reconnect(name: str) -> bool:
+    """Force-restart a proxy subprocess. Returns True on a clean
+    restart, False when the proxy isn't registered or the restart
+    fails. Exceptions from the subprocess handshake are caught and
+    logged — the caller gets a boolean, never a crash."""
     conn = _pool.get(name)
     if conn is None:
+        # Proxy was never connected — treat as a no-op rather than an error.
         return False
-    await conn.stop()
-    await conn.start()
-    await conn._initialize()  # noqa: SLF001 — intentional
+    try:
+        await conn.stop()
+    except Exception as e:
+        print(f"[jig.proxy] reconnect {name}: stop failed: {e}", file=sys.stderr)
+    try:
+        await conn.start()
+        await conn._initialize()  # noqa: SLF001 — intentional
+    except Exception as e:
+        print(f"[jig.proxy] reconnect {name}: restart failed: {e}", file=sys.stderr)
+        return False
     return True
 
 
