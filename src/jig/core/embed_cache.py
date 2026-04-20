@@ -126,16 +126,17 @@ def upsert_tools(
     *,
     slug: str | None = None,
 ) -> int:
-    """Embed and write tool records. Returns count of rows written."""
-    emb = get_embedder()
-    if not emb.available:
-        return 0
+    """Embed and write tool records. Returns count of rows written.
 
-    payloads: list[tuple[str, str, str, str, str, bytes, float]] = []
-    texts: list[str] = []
-    metas: list[tuple[str, str, str, dict[str, object], str]] = []
+    Skips tools whose ``(mcp_name, tool_name, text_hash)`` already exists
+    in the cache — their description + schema haven't changed since the
+    last embed. This keeps repeat invocations cheap; on the hot path
+    ``_tool_archive.archive_all`` runs every server startup, and without
+    this dedup the MCP handshake would pay the full ~40s embedding cost
+    even when nothing has changed since last launch.
+    """
     now = time.time()
-
+    all_metas: list[tuple[str, str, str, dict[str, object], str]] = []
     for t in tools:
         name = str(t.get("name") or t.get("tool_name") or "")
         if not name:
@@ -144,12 +145,30 @@ def upsert_tools(
         schema = t.get("inputSchema") or t.get("input_schema") or {}
         if not isinstance(schema, dict):
             schema = {}
-        th = _text_key(desc, schema)
-        metas.append((mcp_name, name, th, schema, desc))
-        texts.append(_format_for_embedding(name, desc, schema))
+        all_metas.append((mcp_name, name, _text_key(desc, schema), schema, desc))
 
-    if not texts:
+    if not all_metas:
         return 0
+
+    # Filter out rows already present with matching text_hash.
+    with _open(slug) as conn:
+        rows = conn.execute(
+            "SELECT tool_name, text_hash FROM tools WHERE mcp_name = ?",
+            (mcp_name,),
+        ).fetchall()
+    existing = {row[0]: row[1] for row in rows}
+    fresh = [m for m in all_metas if existing.get(m[1]) != m[2]]
+
+    if not fresh:
+        return 0
+
+    emb = get_embedder()
+    if not emb.available:
+        return 0
+
+    payloads: list[tuple[str, str, str, str, str, bytes, float]] = []
+    metas = fresh
+    texts = [_format_for_embedding(name, desc, schema) for (_, name, _th, schema, desc) in metas]
 
     vecs = emb.embed_many(texts)
     if vecs is None:

@@ -4,6 +4,23 @@ All notable changes to `jig` are documented in this file. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and versioning
 adheres to [SemVer](https://semver.org/).
 
+## [0.1.0a22] — 2026-04-20
+
+### Fixed
+- **Critical: MCP reconnect failures due to ~47 s startup latency.**
+  `_tool_archive.archive_all` runs on every server boot and calls
+  `embed_cache.upsert_tools` with the 33 internal-proxy tool
+  descriptions. The old implementation always re-embedded every
+  descriptor, forcing the fastembed model load + inference on each
+  startup; with BGE-large that's 40–50 s. Claude Code's MCP spawn
+  timeout fires well before then, which is what produced the
+  "Failed to reconnect to jig" the user kept hitting after every
+  restart. `upsert_tools` now pre-reads the existing
+  ``(mcp_name, tool_name, text_hash)`` from SQLite and filters the
+  input down to rows that actually changed. First run still pays
+  the embed cost; subsequent runs skip everything and the server
+  handshake completes in well under a second.
+
 ## [0.1.0a21] — 2026-04-20
 
 ### Fixed
