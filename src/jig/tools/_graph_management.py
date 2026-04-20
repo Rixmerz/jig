@@ -62,22 +62,48 @@ def register_graph_management_tools(mcp):
 
         graphs = []
 
-        # Look for graph.yaml files (v2 format)
-        for yaml_file in workflows_dir.glob("*-graph.yaml"):
+        # Any .yaml in the workflows dir is a candidate. The historical
+        # naming convention is ``*-graph.yaml`` but the bundled
+        # ``demo-feature.yaml`` ships without the suffix, so filter by
+        # content (presence of ``nodes:`` + ``edges:``) instead of name.
+        candidates = sorted({*workflows_dir.glob("*-graph.yaml"), *workflows_dir.glob("*.yaml")})
+        for yaml_file in candidates:
             graph_name = yaml_file.stem
             try:
                 content = yaml_file.read_text()
+                # Skip non-graph YAML: require both ``nodes:`` and ``edges:``
+                # at the start of a line (top-level sections).
+                if "\nnodes:" not in "\n" + content or "\nedges:" not in "\n" + content:
+                    continue
                 name = graph_name
                 description = ""
                 version = ""
-                # Only scan inside the top-level `metadata:` block — the
-                # nodes: / edges: sections also have name/description
-                # fields and would otherwise overwrite the graph's.
+                # Scan either the top-level ``metadata:`` block (the
+                # builder-produced layout) or top-level bare keys
+                # (``demo-feature.yaml``-style) — never the nodes/edges
+                # sections, whose ``name:`` / ``description:`` fields
+                # belong to individual nodes and would otherwise bleed
+                # into the graph identity.
                 in_metadata = False
                 for line in content.split('\n'):
                     # Top-level section header (no leading whitespace)
                     if line and not line[0].isspace():
-                        in_metadata = line.strip().startswith('metadata:')
+                        stripped_top = line.strip()
+                        if stripped_top.startswith('metadata:'):
+                            in_metadata = True
+                            continue
+                        in_metadata = False
+                        # Bare top-level keys (only relevant when there's
+                        # no metadata: block)
+                        if stripped_top.startswith('name:'):
+                            if not name or name == graph_name:
+                                name = stripped_top.split(':', 1)[1].strip().strip('"').strip("'")
+                        elif stripped_top.startswith('description:'):
+                            if not description:
+                                description = stripped_top.split(':', 1)[1].strip().strip('"').strip("'")
+                        elif stripped_top.startswith('version:'):
+                            if not version:
+                                version = stripped_top.split(':', 1)[1].strip().strip('"').strip("'")
                         continue
                     if not in_metadata:
                         continue

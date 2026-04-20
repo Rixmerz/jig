@@ -120,6 +120,7 @@ def register(mcp: "FastMCP") -> None:
         query: str,
         top_k: int = 10,
         proxy: str | None = None,
+        include_schema: bool = False,
     ) -> dict[str, Any]:
         """Semantic search across proxied MCP tools.
 
@@ -131,20 +132,24 @@ def register(mcp: "FastMCP") -> None:
             query: natural-language description of the capability you need
             top_k: max results (default 10)
             proxy: optional filter to a single proxied MCP
+            include_schema: if True, each result includes the tool's
+                ``input_schema`` so the agent can pick the right kwargs
+                without a follow-up ``proxy_list_tools`` call. Default
+                False to keep result payloads small.
         """
         hits = embed_cache.search(query, top_k=top_k, mcp_name=proxy)
-        return {
-            "query": query,
-            "results": [
-                {
-                    "mcp": rec.mcp_name,
-                    "tool": rec.tool_name,
-                    "description": rec.description,
-                    "score": round(score, 4),
-                }
-                for rec, score in hits
-            ],
-        }
+        results: list[dict[str, Any]] = []
+        for rec, score in hits:
+            row: dict[str, Any] = {
+                "mcp": rec.mcp_name,
+                "tool": rec.tool_name,
+                "description": rec.description,
+                "score": round(score, 4),
+            }
+            if include_schema:
+                row["input_schema"] = rec.input_schema
+            results.append(row)
+        return {"query": query, "results": results}
 
     @mcp.tool()
     async def proxy_refresh(name: str) -> dict[str, Any]:
@@ -154,12 +159,27 @@ def register(mcp: "FastMCP") -> None:
 
     @mcp.tool()
     async def proxy_keepalive(name: str) -> dict[str, Any]:
-        """Touch the proxy's last-used timestamp to postpone idle shutdown."""
+        """Touch the proxy's last-used timestamp to postpone idle shutdown.
+
+        No-op for internal proxies (``graph``, ``snapshot``,
+        ``experience``, …): they're in-process Python handlers with no
+        subprocess and no idle timer. Calling keepalive on them just
+        returns ``{"ok": true, "kind": "internal", "note": "…"}`` so
+        agents get a clear signal instead of a confusing
+        ``not currently connected`` error.
+        """
+        if internal_proxy.has_mcp(name):
+            return {
+                "ok": True,
+                "name": name,
+                "kind": "internal",
+                "note": "internal proxies have no idle timer — keepalive is a no-op",
+            }
         conn = proxy_pool._pool.get(name)  # noqa: SLF001
         if conn is None:
             return {"ok": False, "reason": f"proxy {name} not currently connected"}
         conn.touch()
-        return {"ok": True, "name": name}
+        return {"ok": True, "name": name, "kind": "subprocess"}
 
     @mcp.tool()
     async def execute_mcp_tool(

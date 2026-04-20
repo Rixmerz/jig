@@ -22,6 +22,7 @@ def register_experience_tools(mcp):
     def experience_query(
         file_path: str,
         top_n: int = 5,
+        min_score: float = 0.3,
         project_dir: str | None = None,
         session_id: str | None = None
     ) -> dict:
@@ -34,6 +35,11 @@ def register_experience_tools(mcp):
         Args:
             file_path: Path to the file to query about (relative or absolute)
             top_n: Maximum number of results to return (default 5)
+            min_score: Minimum relevance score to include (default 0.3).
+                Greenfield projects with a large legacy memory pool
+                accumulate low-relevance noise at the old 0.05 threshold;
+                0.3 keeps the signal-to-noise positive. Drop to 0.05 when
+                you want to see every loosely-related match.
             project_dir: Project directory (optional after set_session)
             session_id: Optional session ID
         """
@@ -50,7 +56,7 @@ def register_experience_tools(mcp):
         scored = []
         for entry in merged:
             score = compute_relevance(entry, file_path)
-            if score > 0.05:
+            if score > min_score:
                 scored.append((entry, score))
 
         scored.sort(key=lambda x: x[1], reverse=True)

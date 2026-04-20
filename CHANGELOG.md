@@ -4,6 +4,35 @@ All notable changes to `jig` are documented in this file. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and versioning
 adheres to [SemVer](https://semver.org/).
 
+## [0.1.0a20] — 2026-04-20
+
+### Fixed
+- **B3:** `graph_list_available` ignored `demo-feature.yaml` (and any
+  other workflow whose filename didn't match `*-graph.yaml`). Glob
+  widened to `*.yaml`, then results filtered by content (must contain
+  `nodes:` + `edges:` top-level sections). The metadata scanner also
+  supports the two YAML shapes jig actually ships — the builder's
+  `metadata:` block and the flat top-level `name:` / `description:`
+  style used by `demo-feature.yaml` — so both render with their real
+  name instead of falling through to the filename.
+- **B9:** `proxy_keepalive` on an internal proxy used to return
+  `{"ok": false, "reason": "proxy <name> not currently connected"}`
+  because internals have no entry in the subprocess pool. It now
+  short-circuits for `internal_proxy.has_mcp(name)` with
+  `{"ok": true, "kind": "internal", "note": "…"}` — the right
+  semantics, since internals have no idle timer to extend.
+
+### Changed
+- **B6:** `proxy_tools_search` accepts `include_schema=True` to return
+  each hit's `input_schema` alongside the description. Lets the agent
+  pick correct kwargs without a second `proxy_list_tools` round-trip.
+  Default remains `False` to keep result payloads small.
+- **B8:** `experience_query` default relevance threshold bumped from
+  `0.05` to `0.3` and exposed as a `min_score` parameter. At 0.05
+  a greenfield project with a large legacy memory pool would return
+  noise; 0.3 keeps the signal-to-noise positive. Drop to 0.05 when
+  you genuinely want everything loosely related.
+
 ## [0.1.0a19] — 2026-04-20
 
 ### Fixed
