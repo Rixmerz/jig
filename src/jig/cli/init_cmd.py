@@ -58,12 +58,36 @@ def _resolve_jig_source(args: argparse.Namespace) -> tuple[str, list[str]]:
     explicit = getattr(args, "source", None) or os.environ.get("JIG_SOURCE")
     if explicit == "tool":
         return "jig-mcp", []
-    if explicit is None and shutil.which("jig-mcp"):
+    if explicit is None and _tool_install_detected():
         return "jig-mcp", []
     source = explicit or _DEFAULT_SOURCE
     if source.startswith("git+") or source.startswith(".") or "/" in source:
         return "uvx", ["--from", source, "jig-mcp"]
     return "uvx", [source]
+
+
+def _tool_install_detected() -> bool:
+    """True when jig-mcp is reachable as a bare command.
+
+    Two signals:
+    - ``jig-mcp`` is on the current PATH — the obvious case.
+    - Or the *running* jig package lives under a ``uv tool install``
+      tree (``~/.local/share/uv/tools/jig-mcp/``). MCP subprocesses
+      spawned by Claude Code inherit the user's shell PATH, which
+      usually contains ``~/.local/bin`` where the entry-point script
+      lands; but the subprocess the server itself runs in may have a
+      stripped PATH. If the package itself is tool-installed, the
+      entry-point is reachable by definition.
+    """
+    if shutil.which("jig-mcp"):
+        return True
+    try:
+        import jig as _jig_pkg
+        pkg_path = str(Path(_jig_pkg.__file__).resolve())
+    except Exception:
+        return False
+    tool_root = str((Path.home() / ".local" / "share" / "uv" / "tools").resolve())
+    return pkg_path.startswith(tool_root)
 
 
 def run(args: argparse.Namespace) -> int:

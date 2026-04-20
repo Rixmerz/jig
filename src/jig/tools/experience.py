@@ -22,7 +22,8 @@ def register_experience_tools(mcp):
     def experience_query(
         file_path: str,
         top_n: int = 5,
-        min_score: float = 0.3,
+        min_score: float = 0.5,
+        scope: str = "project",
         project_dir: str | None = None,
         session_id: str | None = None
     ) -> dict:
@@ -35,22 +36,32 @@ def register_experience_tools(mcp):
         Args:
             file_path: Path to the file to query about (relative or absolute)
             top_n: Maximum number of results to return (default 5)
-            min_score: Minimum relevance score to include (default 0.3).
-                Greenfield projects with a large legacy memory pool
-                accumulate low-relevance noise at the old 0.05 threshold;
-                0.3 keeps the signal-to-noise positive. Drop to 0.05 when
-                you want to see every loosely-related match.
+            min_score: Minimum relevance score to include (default 0.5).
+                At 0.3 a greenfield project's queries still surface
+                unrelated global entries with fuzzy path matches;
+                0.5 filters those out while still catching real hits.
+                Drop to 0.3 or lower when you want the long tail.
+            scope: ``"project"`` (default) queries only the project's
+                local memory; ``"global"`` queries only the cross-project
+                memory; ``"both"`` merges the two. The old default was
+                ``both``; most agent tasks want ``project`` to avoid
+                pulling in unrelated experiences from other repos.
             project_dir: Project directory (optional after set_session)
             session_id: Optional session ID
         """
         resolved_dir, sid = resolve_project_dir(project_dir, session_id)
         project_name = Path(resolved_dir).name
 
-        global_store = get_experience_store()
-        project_store = get_project_experience_store(resolved_dir)
-
-        # Merge both stores for unified query
-        merged = merge_stores(global_store, project_store)
+        if scope == "global":
+            source = get_experience_store()
+            merged = list(source.entries)
+        elif scope == "both":
+            global_store = get_experience_store()
+            project_store = get_project_experience_store(resolved_dir)
+            merged = merge_stores(global_store, project_store)
+        else:  # "project" (default) and any other value
+            project_store = get_project_experience_store(resolved_dir)
+            merged = list(project_store.entries)
 
         # Score and rank
         scored = []

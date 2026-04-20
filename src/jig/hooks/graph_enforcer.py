@@ -64,11 +64,24 @@ def parse_tools_blocked(content):
 
 
 def get_state_path(project_dir):
-    """Resolve graph_state.json path (hub-centralized or local fallback).
+    """Resolve graph_state.json path.
 
-    Hub pattern: {hub_dir}/{states_dir}/{project_name}/graph_state.json
-    Local fallback: {project}/.claude/workflow/graph_state.json
+    Must stay in sync with ``engines.graph_state._get_centralized_state_dir``:
+    state lives under XDG data at ``~/.local/share/jig/states/<project>/``
+    regardless of whether ``~/.local/share/jig/config.json`` exists (the
+    server writes there unconditionally). Fall back to the project-local
+    ``.claude/workflow/graph_state.json`` for pre-XDG installs and manual
+    setups.
     """
+    project_name = Path(project_dir).name
+    xdg_state = (
+        Path.home() / ".local" / "share" / "jig" / "states"
+        / project_name / "graph_state.json"
+    )
+    if xdg_state.exists():
+        return xdg_state
+
+    # Legacy hub override via explicit config.json (still honoured if present)
     config_file = Path.home() / ".local" / "share" / "jig" / "config.json"
     if config_file.exists():
         try:
@@ -76,10 +89,13 @@ def get_state_path(project_dir):
             hub_dir = config.get("hub_dir")
             if hub_dir:
                 states_dir = config.get("states_dir", "states")
-                project_name = Path(project_dir).name
-                return Path(hub_dir) / states_dir / project_name / "graph_state.json"
+                override = Path(hub_dir) / states_dir / project_name / "graph_state.json"
+                if override.exists():
+                    return override
         except Exception:
             pass
+
+    # Project-local fallback
     return Path(project_dir) / ".claude" / "workflow" / "graph_state.json"
 
 

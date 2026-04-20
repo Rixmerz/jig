@@ -78,42 +78,89 @@ def register_graph_management_tools(mcp):
                 name = graph_name
                 description = ""
                 version = ""
-                # Scan either the top-level ``metadata:`` block (the
-                # builder-produced layout) or top-level bare keys
-                # (``demo-feature.yaml``-style) — never the nodes/edges
-                # sections, whose ``name:`` / ``description:`` fields
-                # belong to individual nodes and would otherwise bleed
-                # into the graph identity.
+                raw_lines = content.split('\n')
+                # Build a parser that understands the two YAML shapes jig
+                # emits — builder ``metadata:`` block and demo-style flat
+                # top-level keys — and the block-scalar (``|`` / ``>``)
+                # form, since ``demo-feature.yaml`` uses
+                # ``description: |`` with indented continuation lines.
                 in_metadata = False
-                for line in content.split('\n'):
-                    # Top-level section header (no leading whitespace)
+                i = 0
+                while i < len(raw_lines):
+                    line = raw_lines[i]
                     if line and not line[0].isspace():
                         stripped_top = line.strip()
                         if stripped_top.startswith('metadata:'):
                             in_metadata = True
+                            i += 1
                             continue
                         in_metadata = False
-                        # Bare top-level keys (only relevant when there's
-                        # no metadata: block)
-                        if stripped_top.startswith('name:'):
-                            if not name or name == graph_name:
-                                name = stripped_top.split(':', 1)[1].strip().strip('"').strip("'")
-                        elif stripped_top.startswith('description:'):
-                            if not description:
-                                description = stripped_top.split(':', 1)[1].strip().strip('"').strip("'")
-                        elif stripped_top.startswith('version:'):
-                            if not version:
-                                version = stripped_top.split(':', 1)[1].strip().strip('"').strip("'")
+                        key_match = None
+                        for k in ('name', 'description', 'version'):
+                            if stripped_top.startswith(f'{k}:'):
+                                key_match = k
+                                break
+                        if key_match is None:
+                            i += 1
+                            continue
+                        val = stripped_top.split(':', 1)[1].strip().strip('"').strip("'")
+                        if val in ('|', '>'):
+                            block: list[str] = []
+                            i += 1
+                            while i < len(raw_lines):
+                                nxt = raw_lines[i]
+                                if nxt and not nxt[0].isspace():
+                                    break
+                                block.append(nxt.strip())
+                                i += 1
+                            val = ' '.join(seg for seg in block if seg).strip()
+                        else:
+                            i += 1
+                        if key_match == 'name' and (not name or name == graph_name):
+                            name = val
+                        elif key_match == 'description' and not description:
+                            description = val
+                        elif key_match == 'version' and not version:
+                            version = val
                         continue
                     if not in_metadata:
+                        i += 1
                         continue
                     stripped = line.strip()
-                    if stripped.startswith('name:'):
-                        name = stripped.split(':', 1)[1].strip().strip('"').strip("'")
-                    elif stripped.startswith('description:'):
-                        description = stripped.split(':', 1)[1].strip().strip('"').strip("'")
-                    elif stripped.startswith('version:'):
-                        version = stripped.split(':', 1)[1].strip().strip('"').strip("'")
+                    key_match = None
+                    for k in ('name', 'description', 'version'):
+                        if stripped.startswith(f'{k}:'):
+                            key_match = k
+                            break
+                    if key_match is None:
+                        i += 1
+                        continue
+                    val = stripped.split(':', 1)[1].strip().strip('"').strip("'")
+                    if val in ('|', '>'):
+                        # Block scalar — take continuation lines that are
+                        # more indented than the key itself.
+                        base_indent = len(line) - len(line.lstrip())
+                        block = []
+                        i += 1
+                        while i < len(raw_lines):
+                            nxt = raw_lines[i]
+                            if not nxt.strip():
+                                i += 1
+                                continue
+                            this_indent = len(nxt) - len(nxt.lstrip())
+                            if this_indent <= base_indent:
+                                break
+                            block.append(nxt.strip())
+                            i += 1
+                        val = ' '.join(seg for seg in block if seg).strip()
+                    else:
+                        i += 1
+                    if key_match == 'name':
+                        name = val
+                    elif key_match == 'description':
+                        description = val
+                    elif key_match == 'version':
+                        version = val
                 graphs.append({
                     "id": graph_name,
                     "name": name,

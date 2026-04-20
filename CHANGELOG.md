@@ -4,6 +4,40 @@ All notable changes to `jig` are documented in this file. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and versioning
 adheres to [SemVer](https://semver.org/).
 
+## [0.1.0a21] — 2026-04-20
+
+### Fixed
+- **B2b (critical):** Path mismatch between writer
+  (``engines.graph_state._get_centralized_state_dir`` → XDG
+  ``~/.local/share/jig/states/<proj>/``) and reader
+  (``hooks.graph_enforcer.get_state_path`` → looked only at
+  ``~/.local/share/jig/config.json`` which doesn't exist, then fell
+  back to ``.claude/workflow/``). Effect: tools_blocked was
+  **decorative** — every enforcer invocation found no state and
+  approved. ``get_state_path`` now probes the XDG hub path first
+  (matches the writer exactly), then the legacy config.json override,
+  then project-local. Enforcement is real again.
+- **B3b:** ``graph_list_available`` returned
+  ``description: "|"`` for ``demo-feature.yaml`` because its
+  top-level ``description: |`` uses the YAML block scalar form; the
+  scanner captured the literal pipe. Scanner now joins the indented
+  continuation lines for top-level and ``metadata:``-nested keys.
+
+### Changed
+- **B8:** ``experience_query`` default raised to ``min_score=0.5``
+  and given a ``scope`` parameter (``project`` default / ``global``
+  / ``both``). A greenfield project querying a path like
+  ``src/greeter.ts`` was pulling in jig's own asset paths from the
+  global store at the old 0.3 threshold; ``scope="project"`` +
+  higher floor fixes it. The old union-by-default behaviour is still
+  reachable via ``scope="both"``.
+- **B4:** ``jig init`` / ``jig_init_project`` auto-detect now also
+  treats a package installed under ``~/.local/share/uv/tools/`` as
+  the tool-install form, not just ``shutil.which("jig-mcp")``. MCP
+  subprocesses with stripped PATH still get the lock-free
+  ``{"command": "jig-mcp"}`` render instead of falling back to
+  ``uvx --from git+https://…``.
+
 ## [0.1.0a20] — 2026-04-20
 
 ### Fixed
