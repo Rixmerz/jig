@@ -57,16 +57,29 @@ Given a target directory:
 
 ## The `--source` flag
 
-Default renders `uvx --from git+https://github.com/Rixmerz/jig jig-mcp`
-so a fresh `jig init` works out-of-the-box while jig-mcp is pre-PyPI.
-Once jig-mcp is published, pass `--source jig-mcp` (or set
-`JIG_SOURCE=jig-mcp`) to render the bare PyPI form:
+Three render modes, picked by `--source` / `JIG_SOURCE` / auto-detect:
 
-```json
-{"jig": {"command": "uvx", "args": ["jig-mcp"]}}
+| Source | Rendered command | When |
+|--------|------------------|------|
+| `tool` | `{"command": "jig-mcp"}` | Recommended. Assumes you ran `uv tool install git+https://github.com/Rixmerz/jig` once. Spawn is instant, no uv cache lock contention between concurrent Claude Code sessions. |
+| `jig-mcp` | `uvx jig-mcp` | PyPI form, once the package is published. Each session triggers uv's resolver. |
+| `git+…` or `./path` or `/abs/path` | `uvx --from <spec> jig-mcp` | Rebuilds from source on every spawn and holds an exclusive lock on `~/.cache/uv/.lock` — workable for a single session, hostile to multi-session workflows. |
+
+**Auto-detect.** When neither `--source` nor `JIG_SOURCE` is set,
+`jig init` probes `PATH` for `jig-mcp`. If it's there (tool-installed),
+the `tool` form wins. Otherwise falls back to
+`git+https://github.com/Rixmerz/jig` so a fresh install still works
+without touching flags.
+
+### Recommended first-time install
+
+```bash
+uv tool install git+https://github.com/Rixmerz/jig
+jig init /path/to/project          # auto-detects and renders tool form
 ```
 
-Override with any source spec via `--source` or the `JIG_SOURCE` env var.
+Updates: `uv tool upgrade jig-mcp`. The `.mcp.json` stays the same
+across upgrades because the command is just `jig-mcp`.
 
 Accepted source formats:
 

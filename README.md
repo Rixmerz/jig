@@ -19,24 +19,40 @@ Reduction: ~89% of per-session tool budget recovered.
 ## Install
 
 ```bash
-uv tool install jig-mcp        # or: pipx install jig-mcp
-jig init /path/to/project      # scaffolds .claude/ + rewrites .mcp.json
+# Pre-PyPI install (recommended — persistent, lock-free between sessions)
+uv tool install git+https://github.com/Rixmerz/jig
+
+# Scaffold a project
+jig init /path/to/project
 ```
 
 Zero system dependencies. No Docker, no Ollama, no Node, no Rust. Just Python 3.10+.
 
+Once jig-mcp is published on PyPI, drop the `git+https://…` bit: `uv tool install jig-mcp`.
+
 ## Quickstart
 
 ```bash
-# 1. Install
-uv tool install jig-mcp
+# 1. Install (once)
+uv tool install git+https://github.com/Rixmerz/jig
 
-# 2. Scaffold a project (scans existing .mcp.json, migrates local MCPs to jig proxy)
+# 2. Scaffold a project. Scans existing .mcp.json, migrates local MCPs
+#    into jig's proxy pool, and writes a lock-free `.mcp.json` entry.
 jig init ~/my-project
 
-# 3. Open Claude Code at ~/my-project. You'll see ~29 tools instead of hundreds.
-#    Try: jig_guide(topic="getting-started")
+# 3. Open Claude Code at ~/my-project. You'll see ~26 tools instead of
+#    hundreds. Try: jig_guide(topic="getting-started").
 ```
+
+`jig init` auto-detects your install. If `jig-mcp` is on `PATH` (from
+`uv tool install`), the rendered `.mcp.json` uses the bare command:
+
+```json
+{"mcpServers": {"jig": {"command": "jig-mcp"}}}
+```
+
+No uvx rebuild per spawn, no cache-lock contention between concurrent
+Claude Code sessions. Upgrade in place with `uv tool upgrade jig-mcp`.
 
 ## What jig ships
 

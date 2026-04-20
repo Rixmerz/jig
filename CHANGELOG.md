@@ -4,6 +4,34 @@ All notable changes to `jig` are documented in this file. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and versioning
 adheres to [SemVer](https://semver.org/).
 
+## [0.1.0a16] — 2026-04-19
+
+### Changed
+- `jig init` / `jig_init_project` now prefers a tool-installed
+  `jig-mcp` on `PATH` over rebuilding with `uvx` on every spawn.
+  When the binary is detected, the rendered `.mcp.json` becomes:
+
+  ```json
+  {"mcpServers": {"jig": {"command": "jig-mcp"}}}
+  ```
+
+  The motivating bug: `uvx --from …` holds an exclusive lock on
+  `~/.cache/uv/.lock` for the duration of each build, so concurrent
+  Claude Code sessions couldn't both spawn jig — the second one
+  hit the lock, Claude Code's MCP spawn timeout fired, and the
+  session reported "Failed to reconnect to jig". The tool install
+  has no lock at spawn time.
+
+- New `--source tool` value (also `JIG_SOURCE=tool`) explicitly asks
+  for the bare form. Default behavior is auto-detect: if
+  `shutil.which("jig-mcp")` hits, render tool form; otherwise fall
+  back to `git+https://github.com/Rixmerz/jig` (still keeps
+  zero-setup working, just slower under concurrency).
+
+- README + docs/init.md walked through the three render modes (`tool`,
+  PyPI, git+https) with a table showing when each applies, and the
+  recommended first-time install command.
+
 ## [0.1.0a15] — 2026-04-19
 
 ### Changed

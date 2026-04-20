@@ -57,10 +57,13 @@ def _build_parser() -> argparse.ArgumentParser:
         "--source",
         default=None,
         help=(
-            "Install source written into the rendered .mcp.json. Defaults to "
-            "'git+https://github.com/Rixmerz/jig' while jig-mcp is pre-PyPI. "
-            "Pass 'jig-mcp' (or set JIG_SOURCE=jig-mcp) to use the PyPI "
-            "package once it's published."
+            "Install source written into the rendered .mcp.json. "
+            "'tool' = bare `jig-mcp` command, assumes `uv tool install` "
+            "was run. 'jig-mcp' = `uvx jig-mcp` (PyPI). "
+            "'git+...' = `uvx --from <spec> jig-mcp`. "
+            "Auto-detected as 'tool' when jig-mcp is on PATH; otherwise "
+            "falls back to git+https://github.com/Rixmerz/jig. Can also be "
+            "set via JIG_SOURCE env var."
         ),
     )
     init.set_defaults(func=_cmd_init)

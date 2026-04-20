@@ -33,19 +33,34 @@ _DEFAULT_SOURCE = "git+https://github.com/Rixmerz/jig"
 
 
 def _resolve_jig_source(args: argparse.Namespace) -> tuple[str, list[str]]:
-    """Pick the command+args for the rendered `jig` entry in .mcp.json.
+    """Pick the command+args for the rendered ``jig`` entry in .mcp.json.
 
-    Precedence: --source flag > JIG_SOURCE env > git+https default.
-    The default points at the GitHub repo because jig-mcp isn't on PyPI
-    yet. Once published, users can pass ``--source jig-mcp`` (or set
-    ``JIG_SOURCE=jig-mcp``) to render the bare PyPI form.
+    Precedence: ``--source`` flag > ``JIG_SOURCE`` env > auto-detect
+    (tool-installed) > git+https fallback.
 
     Source-shape rules:
-    - Bare package name (e.g. ``jig-mcp``): rendered as ``uvx <name>``.
-    - ``git+…`` / ``.`` / contains ``/`` (path or URL): wrapped as
-      ``uvx --from <spec> jig-mcp``.
+    - ``tool`` (special): render ``{"command": "jig-mcp"}`` — assumes
+      ``uv tool install`` was run and ``jig-mcp`` is on ``PATH``.
+      This is the recommended mode: spawn is instant, no uv cache
+      contention, multiple Claude Code sessions can share the install.
+    - Bare package name (``jig-mcp``): rendered as ``uvx <name>``
+      (PyPI form, once published).
+    - ``git+…`` / ``.`` / contains ``/``: wrapped as
+      ``uvx --from <spec> jig-mcp``. Rebuilds on each spawn and locks
+      the uv cache — fine for a single session, painful across many.
+
+    Auto-detect: when neither ``--source`` nor ``JIG_SOURCE`` is set
+    and ``jig-mcp`` is already on ``PATH``, the tool form is chosen.
+    Running ``uv tool install git+https://github.com/Rixmerz/jig``
+    once therefore wins the lock-free render for every subsequent
+    ``jig init`` without a flag.
     """
-    source = getattr(args, "source", None) or os.environ.get("JIG_SOURCE") or _DEFAULT_SOURCE
+    explicit = getattr(args, "source", None) or os.environ.get("JIG_SOURCE")
+    if explicit == "tool":
+        return "jig-mcp", []
+    if explicit is None and shutil.which("jig-mcp"):
+        return "jig-mcp", []
+    source = explicit or _DEFAULT_SOURCE
     if source.startswith("git+") or source.startswith(".") or "/" in source:
         return "uvx", ["--from", source, "jig-mcp"]
     return "uvx", [source]
