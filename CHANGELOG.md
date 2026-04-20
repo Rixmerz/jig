@@ -4,6 +4,24 @@ All notable changes to `jig` are documented in this file. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and versioning
 adheres to [SemVer](https://semver.org/).
 
+## [0.1.0a14] — 2026-04-19
+
+### Added
+- `jig_init_project(project_path, source?, dry_run?, no_warmup?)`
+  MCP tool. Phase-0 entry point — same behavior as the `jig init`
+  CLI, but callable straight from the agent so the whole
+  init → deploy flow stays inside the chat without shelling out.
+  Returns a structured result with `phase`, `next_step`, and the
+  resolved path so the agent knows what to call next.
+
+### Changed
+- `deploy_project_agents` moved from the `deploy` internal proxy
+  back to the top-level MCP surface. The two lifecycle entry points
+  (`jig_init_project`, `deploy_project_agents`) are now both visible
+  in every session without semantic search. The now-empty `deploy`
+  bucket is removed from `ARCHIVE_MAP`.
+- Top-level surface: 24 → 26. Internal proxies: 8 → 7.
+
 ## [0.1.0a13] — 2026-04-19
 
 ### Changed

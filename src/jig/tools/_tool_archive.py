@@ -72,9 +72,6 @@ ARCHIVE_MAP: dict[str, list[str]] = {
         "workflow_set_enabled",
         "workflow_set_dcc_injection",
     ],
-    "deploy": [
-        "deploy_project_agents",
-    ],
     "session": [
         "set_session",
     ],

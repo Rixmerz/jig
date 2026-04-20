@@ -179,6 +179,59 @@ def _resolve_agents_for_stack(tech_stack: list[str], extra_agents: list[str] | N
 def register_deployment_tools(mcp):
 
     @mcp.tool()
+    def jig_init_project(
+        project_path: str,
+        source: str | None = None,
+        dry_run: bool = False,
+        no_warmup: bool = False,
+    ) -> dict:
+        """Phase 0: scaffold a project with jig's base layer.
+
+        Copies hooks (all), commands (all), workflows (all), base rules
+        (10 universal ones), and settings.json into
+        ``<project_path>/.claude/``. Migrates any local MCPs from the
+        project's existing ``.mcp.json`` into jig's proxy pool, then
+        rewrites ``.mcp.json`` to point at jig only (plus any remote
+        MCPs). Optionally warms up the embedding cache.
+
+        Stack-specific rules, agents, and skills are NOT copied here —
+        call ``deploy_project_agents`` next (phase 1) with the declared
+        tech_stack to bring in the watcher rules, specialised agents,
+        and on-demand skills that match the project.
+
+        Args:
+            project_path: Absolute path to the target project directory.
+            source: Optional install spec written into the rendered
+                .mcp.json. ``git+https://...`` pre-PyPI. Defaults to
+                ``uvx jig-mcp`` (PyPI).
+            dry_run: If True, print the plan and return without writing.
+            no_warmup: Skip embedding warmup (first search will be slow).
+
+        Returns:
+            {success, exit_code, project_path, phase, next_step}
+        """
+        import argparse
+        from jig.cli.init_cmd import run as _run_init
+
+        ns = argparse.Namespace(
+            path=project_path,
+            source=source,
+            dry_run=dry_run,
+            no_warmup=no_warmup,
+        )
+        exit_code = _run_init(ns)
+        return {
+            "success": exit_code == 0,
+            "exit_code": exit_code,
+            "project_path": str(Path(project_path).expanduser().resolve()),
+            "phase": 0,
+            "next_step": (
+                "Call deploy_project_agents(project_path, tech_stack=[...]) "
+                "to bring in agents, skills, and stack-specific watcher rules."
+            ),
+        }
+
+    @mcp.tool()
     def deploy_project_agents(
         project_path: str,
         tech_stack: list[str],
