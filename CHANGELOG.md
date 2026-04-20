@@ -4,6 +4,17 @@ All notable changes to `jig` are documented in this file. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and versioning
 adheres to [SemVer](https://semver.org/).
 
+## [0.1.0a15] — 2026-04-19
+
+### Changed
+- `jig init` / `jig_init_project` default source is now
+  ``git+https://github.com/Rixmerz/jig`` instead of the PyPI spec.
+  The rendered ``.mcp.json`` therefore works out-of-the-box while
+  jig-mcp isn't on PyPI yet — no ``--source`` flag required. Override
+  with ``--source jig-mcp`` (or ``JIG_SOURCE=jig-mcp``) to use the
+  PyPI package after publication. Docs and CLI help updated to match.
+- Docs (``docs/init.md``, README) also note the new default.
+
 ## [0.1.0a14] — 2026-04-19
 
 ### Added

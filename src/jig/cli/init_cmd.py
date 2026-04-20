@@ -29,17 +29,23 @@ from jig.core import paths
 from jig.engines import proxy_pool
 
 
+_DEFAULT_SOURCE = "git+https://github.com/Rixmerz/jig"
+
+
 def _resolve_jig_source(args: argparse.Namespace) -> tuple[str, list[str]]:
     """Pick the command+args for the rendered `jig` entry in .mcp.json.
 
-    Precedence: --source flag > JIG_SOURCE env > PyPI default.
-    When the source starts with 'git+' or looks like a path,
-    render uvx --from <source> jig-mcp; otherwise assume it's the
-    PyPI package spec.
+    Precedence: --source flag > JIG_SOURCE env > git+https default.
+    The default points at the GitHub repo because jig-mcp isn't on PyPI
+    yet. Once published, users can pass ``--source jig-mcp`` (or set
+    ``JIG_SOURCE=jig-mcp``) to render the bare PyPI form.
+
+    Source-shape rules:
+    - Bare package name (e.g. ``jig-mcp``): rendered as ``uvx <name>``.
+    - ``git+…`` / ``.`` / contains ``/`` (path or URL): wrapped as
+      ``uvx --from <spec> jig-mcp``.
     """
-    source = getattr(args, "source", None) or os.environ.get("JIG_SOURCE")
-    if not source:
-        return "uvx", ["jig-mcp"]
+    source = getattr(args, "source", None) or os.environ.get("JIG_SOURCE") or _DEFAULT_SOURCE
     if source.startswith("git+") or source.startswith(".") or "/" in source:
         return "uvx", ["--from", source, "jig-mcp"]
     return "uvx", [source]

@@ -55,17 +55,18 @@ Given a target directory:
 # Session cost drops from ~120 schemas to 28.
 ```
 
-## The `--source` flag (pre-PyPI)
+## The `--source` flag
 
-Default renders `uvx jig-mcp`, which pulls from PyPI. Until jig-mcp is
-published, pass `--source git+https://github.com/Rixmerz/jig` and the
-rendered `.mcp.json` becomes
+Default renders `uvx --from git+https://github.com/Rixmerz/jig jig-mcp`
+so a fresh `jig init` works out-of-the-box while jig-mcp is pre-PyPI.
+Once jig-mcp is published, pass `--source jig-mcp` (or set
+`JIG_SOURCE=jig-mcp`) to render the bare PyPI form:
 
 ```json
-{"jig": {"command": "uvx", "args": ["--from", "git+...", "jig-mcp"]}}
+{"jig": {"command": "uvx", "args": ["jig-mcp"]}}
 ```
 
-Can also be set via `JIG_SOURCE` env var.
+Override with any source spec via `--source` or the `JIG_SOURCE` env var.
 
 Accepted source formats:
 

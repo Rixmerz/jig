@@ -57,10 +57,10 @@ def _build_parser() -> argparse.ArgumentParser:
         "--source",
         default=None,
         help=(
-            "Install source written into the rendered .mcp.json (e.g. "
-            "'git+https://github.com/Rixmerz/jig' for pre-PyPI installs). "
-            "Can also be set via JIG_SOURCE env var. Defaults to 'jig-mcp' "
-            "(i.e. pulls from PyPI once the package is published)."
+            "Install source written into the rendered .mcp.json. Defaults to "
+            "'git+https://github.com/Rixmerz/jig' while jig-mcp is pre-PyPI. "
+            "Pass 'jig-mcp' (or set JIG_SOURCE=jig-mcp) to use the PyPI "
+            "package once it's published."
         ),
     )
     init.set_defaults(func=_cmd_init)
