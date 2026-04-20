@@ -87,7 +87,7 @@ _TECH_RULE_MAP: dict[str, list[str]] = {
 _CORE_AGENTS = ["orchestrator", "debugger", "reviewer"]
 
 # Core skills always included
-_CORE_SKILLS = ["qa-patterns", "testing", "validation", "debug"]
+_CORE_SKILLS = ["jig-methodology", "qa-patterns", "testing", "validation", "debug"]
 
 
 def _parse_agent_frontmatter(content: str) -> tuple[dict, str]:

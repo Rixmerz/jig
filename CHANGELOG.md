@@ -4,6 +4,29 @@ All notable changes to `jig` are documented in this file. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and versioning
 adheres to [SemVer](https://semver.org/).
 
+## [0.1.0a17] — 2026-04-19
+
+### Added
+- New `rules/jig-methodology.md` base rule + matching
+  `skills/jig-methodology/SKILL.md` operational playbook. The rule
+  sets the mental model (discover → execute_mcp_tool, snapshots are
+  automatic, DCC signals surface themselves, tool budget). The skill
+  gives the concrete recipes: kickoff sequence, per-task flows
+  (feature / bug hunt / refactor / MCP add), native replacements for
+  `git log`/`git stash`/`grep commits`, enforcer etiquette, and a
+  "things NOT to do" list.
+- `jig-methodology` added to `_CORE_SKILLS` so every invocation of
+  `deploy_project_agents` injects it into the deployed agents'
+  frontmatter regardless of tech stack.
+- `jig-methodology.md` added to `BASE_RULES` so `jig init` drops it
+  into `<project>/.claude/rules/` on scaffold.
+
+### Removed
+- `rules/serena-mcp.md`. Serena is one of many MCPs users can add via
+  `proxy_add`; bundling a rule that told every agent to prefer Serena
+  was opinionated in a way jig shouldn't be. Removed from
+  `BASE_RULES` too.
+
 ## [0.1.0a16] — 2026-04-19
 
 ### Changed
