@@ -4,6 +4,24 @@ All notable changes to `jig` are documented in this file. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and versioning
 adheres to [SemVer](https://semver.org/).
 
+## [0.1.0a23] — 2026-04-20
+
+### Fixed
+- **B13:** ``graph_task_complete`` reported every ready task as
+  ``newly_ready``, even the ones that were ready *before* the
+  completion. It's supposed to be a delta — "what unblocked because
+  you just finished this task." Fix: snapshot the ready set before
+  ``mark_task_complete``, diff against the post-complete set. The
+  response now exposes three disjoint arrays:
+  ``newly_ready`` (actually unblocked by this completion),
+  ``still_ready`` (ready before and still are, not yet completed),
+  and ``ready`` (the full post-complete frontier — the union, kept
+  for callers that want the simpler view).
+- **B14:** ``experience_record`` docstring listed 7 accepted ``type``
+  values while ``engines.experience_memory.VALID_TYPES`` contains 8
+  (``skill_referenced`` was the stray). Doc rewritten to enumerate
+  the exact frozenset and point at it for truth-keeping.
+
 ## [0.1.0a22] — 2026-04-20
 
 ### Fixed

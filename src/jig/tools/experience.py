@@ -115,8 +115,12 @@ def register_experience_tools(mcp):
         or resolutions that should be remembered for future reference.
 
         Args:
-            type: Experience type (tension_caused|tension_resolved|smell_introduced|
-                  smell_fixed|gate_blocked|gate_resolved|impact_high)
+            type: Experience type. Accepted values (match the runtime
+                ``engines.experience_memory.VALID_TYPES`` frozenset):
+                ``tension_caused``, ``tension_resolved``,
+                ``smell_introduced``, ``smell_fixed``,
+                ``gate_blocked``, ``gate_resolved``,
+                ``impact_high``, ``skill_referenced``.
             file_path: File path this experience relates to
             description: Human-readable description of the experience
             severity: low|medium|high|critical (default medium)

@@ -678,28 +678,37 @@ def register_graph_core_tools(mcp):
                 "project_dir": resolved_dir,
             }
 
+        # Capture ready-set BEFORE marking complete so ``newly_ready``
+        # can be a true delta (tasks whose deps were blocked on the
+        # just-completed one) instead of the whole frontier.
+        before_ready = {t.id for t in compute_ready_tasks(graph, state, node_id)}
         state.mark_task_complete(node_id, task_id, outputs)
         save_graph_state(resolved_dir, state)
 
-        newly_ready = compute_ready_tasks(graph, state, node_id)
+        after_ready = compute_ready_tasks(graph, state, node_id)
         is_complete = is_dag_complete(graph, state, node_id)
         completed_count = len(state.get_completed_tasks_for_node(node_id))
+
+        def _task_view(t):
+            return {
+                "id": t.id,
+                "name": t.name,
+                "prompt": t.prompt,
+                "dependencies": t.dependencies,
+                "tools_blocked": t.tools_blocked,
+                "mcps_enabled": t.mcps_enabled,
+            }
+
+        newly_unblocked = [t for t in after_ready if t.id not in before_ready]
+        still_ready = [t for t in after_ready if t.id in before_ready]
 
         return {
             "success": True,
             "session_id": sid,
             "completed": task_id,
-            "newly_ready": [
-                {
-                    "id": t.id,
-                    "name": t.name,
-                    "prompt": t.prompt,
-                    "dependencies": t.dependencies,
-                    "tools_blocked": t.tools_blocked,
-                    "mcps_enabled": t.mcps_enabled,
-                }
-                for t in newly_ready
-            ],
+            "newly_ready": [_task_view(t) for t in newly_unblocked],
+            "still_ready": [_task_view(t) for t in still_ready],
+            "ready": [_task_view(t) for t in after_ready],
             "is_dag_complete": is_complete,
             "completed_count": completed_count,
             "total_tasks": len(current_node.tasks),
