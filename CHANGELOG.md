@@ -4,6 +4,25 @@ All notable changes to `jig` are documented in this file. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and versioning
 adheres to [SemVer](https://semver.org/).
 
+## [0.1.0a27] — 2026-04-21
+
+### Added (doctor extensions)
+- **DCC injection check.** When a per-project audit runs, `doctor` now
+  inspects the project's enforcer config and the XDG DCC db. Reports
+  `[!] DCC indexed` if the db is missing / empty (user hasn't run
+  `cube_index_project` yet) or `[!] DCC injection config` when
+  `dcc_injection_enabled` or `mid_phase_dcc` is false while data IS
+  indexed — the case where smells would quietly stop auto-injecting.
+- **Hook content drift.** Compares each local `.claude/hooks/*.py` to
+  the bundled wheel version (sha256) and flags the mismatches as
+  `[!] hook content drift`. Drift repair is deliberately NOT added
+  to the auto-repair plan: overwriting a hand-edited hook would be
+  destructive, so users have to think before acting.
+- **Unified diff in `--dry-run`.** The settings.json rewrite now
+  renders its unified diff under the repair plan so users can verify
+  exactly which `python3` lines will flip to `sys.executable` before
+  committing to `--repair`.
+
 ## [0.1.0a26] — 2026-04-20
 
 ### Added

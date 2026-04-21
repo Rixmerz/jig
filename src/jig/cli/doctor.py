@@ -26,6 +26,8 @@ Repair (``--repair``):
 from __future__ import annotations
 
 import argparse
+import difflib
+import hashlib
 import json
 import os
 import re
@@ -97,6 +99,19 @@ def run(args: argparse.Namespace) -> int:
         if hook_status[2]:
             repair_plan.append(("chmod-hooks", (hooks_dir, hook_status[2])))
 
+        drifted = _drifted_hooks(hooks_dir)
+        if drifted:
+            findings.append((
+                "!",
+                "hook content drift",
+                f"{len(drifted)} hook(s) differ from bundled wheel (may be customised)",
+            ))
+            # Drift repair is opt-in destructive — don't add to plan
+            # automatically; advertise it in the report so users have
+            # to think before overwriting their edits.
+        elif hook_status[0][0] == "✓":
+            findings.append(("✓", "hook content drift", "hooks match bundled version"))
+
         rules_dir = claude_dir / "rules"
         has_methodology = (rules_dir / "jig-methodology.md").is_file()
         findings.append((
@@ -104,6 +119,10 @@ def run(args: argparse.Namespace) -> int:
             "jig-methodology rule",
             "present" if has_methodology else "missing — re-run jig_init_project",
         ))
+
+        dcc_state = _check_dcc_injection(proj)
+        if dcc_state is not None:
+            findings.append(dcc_state)
 
     passed = sum(1 for s, *_ in findings if s == "✓")
     total = len(findings)
@@ -124,6 +143,10 @@ def run(args: argparse.Namespace) -> int:
         for action, payload in repair_plan:
             print(f"  - {_describe_repair(action, payload)}")
         if getattr(args, "dry_run", False):
+            diffs = _render_dry_run_diffs(repair_plan)
+            if diffs:
+                print()
+                print(diffs)
             print("\n(dry run — no changes made)")
             return 0
         print()
@@ -266,6 +289,88 @@ def _check_hooks_dir(hooks_dir: Path) -> tuple[tuple[str, str, str], list[str], 
         missing,
         non_exec,
     )
+
+
+def _drifted_hooks(hooks_dir: Path) -> list[str]:
+    """Return hook filenames whose content hash differs from the wheel bundle."""
+    if not hooks_dir.is_dir():
+        return []
+    try:
+        import jig.hooks as hooks_pkg
+        bundled = resources.files(hooks_pkg)
+    except Exception:
+        return []
+    drift: list[str] = []
+    for p in hooks_dir.iterdir():
+        if not p.is_file() or p.name not in _EXPECTED_HOOKS:
+            continue
+        try:
+            local = p.read_bytes()
+            src_entry = bundled / p.name
+            if not src_entry.is_file():
+                continue
+            src = src_entry.read_bytes()
+        except OSError:
+            continue
+        if hashlib.sha256(local).digest() != hashlib.sha256(src).digest():
+            drift.append(p.name)
+    return sorted(drift)
+
+
+def _check_dcc_injection(project_dir: Path) -> tuple[str, str, str] | None:
+    """Warn when DCC has indexed data but dcc_injection is disabled.
+
+    Returns None when nothing actionable to report (no config, no DB).
+    """
+    db_path = paths.data_dir() / "dcc.db"
+    dcc_indexed = db_path.exists() and db_path.stat().st_size > 0
+    try:
+        from jig.engines.hub_config import load_enforcer_config
+        cfg = load_enforcer_config(str(project_dir))
+    except Exception:
+        cfg = {}
+    injection_enabled = cfg.get("dcc_injection_enabled", True)
+    mid_phase_enabled = cfg.get("mid_phase_dcc", True)
+    if not dcc_indexed:
+        return ("!", "DCC indexed", "no dcc.db yet — run cube_index_project once")
+    if not injection_enabled or not mid_phase_enabled:
+        details = []
+        if not injection_enabled:
+            details.append("dcc_injection_enabled=false")
+        if not mid_phase_enabled:
+            details.append("mid_phase_dcc=false")
+        return ("!", "DCC injection config", ", ".join(details) + " — smells won't auto-inject")
+    return ("✓", "DCC injection config", "indexed + injection enabled")
+
+
+def _render_dry_run_diffs(plan: list[tuple[str, object]]) -> str:
+    """For each ``rewrite-settings`` entry, produce a unified diff so the
+    user can see exactly what changes before approving."""
+    chunks: list[str] = []
+    for action, payload in plan:
+        if action != "rewrite-settings":
+            continue
+        settings_path = payload
+        if not settings_path.is_file():
+            continue
+        before = settings_path.read_text(encoding="utf-8")
+        after = before.replace(
+            '"command": "python3 ',
+            f'"command": "{sys.executable} ',
+        )
+        if before == after:
+            continue
+        diff = difflib.unified_diff(
+            before.splitlines(keepends=False),
+            after.splitlines(keepends=False),
+            fromfile=str(settings_path),
+            tofile=f"{settings_path} (after repair)",
+            lineterm="",
+        )
+        chunks.append("\n".join(diff))
+    if not chunks:
+        return ""
+    return "Diff preview:\n" + "\n\n".join(chunks)
 
 
 def _describe_repair(action: str, payload) -> str:
