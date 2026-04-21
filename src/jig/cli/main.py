@@ -68,7 +68,25 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     init.set_defaults(func=_cmd_init)
 
-    doctor = sub.add_parser("doctor", help="Run diagnostics on the jig installation")
+    doctor = sub.add_parser(
+        "doctor",
+        help="Run diagnostics (global + optional per-project)",
+    )
+    doctor.add_argument(
+        "--project",
+        default=None,
+        help="Path to a jig-scaffolded project to audit in addition to global checks",
+    )
+    doctor.add_argument(
+        "--repair",
+        action="store_true",
+        help="Auto-fix auto-fixable issues (requires --project). Rewrites stale python3 in settings.json, restores missing hooks, chmod +x on hook scripts.",
+    )
+    doctor.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="With --repair, print the plan without touching anything",
+    )
     doctor.set_defaults(func=_cmd_doctor)
 
     return parser

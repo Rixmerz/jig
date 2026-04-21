@@ -4,6 +4,33 @@ All notable changes to `jig` are documented in this file. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and versioning
 adheres to [SemVer](https://semver.org/).
 
+## [0.1.0a26] — 2026-04-20
+
+### Added
+- ``jig doctor --project <path> [--repair] [--dry-run]``. Diagnostics
+  beyond the global smoke (python, fastembed, XDG, git) now cover
+  per-project drift from an upgraded bundle:
+  - ``settings.json`` hook commands use absolute python (vs the bare
+    ``python3`` shipped by pre-a25 ``jig init``).
+  - ``.claude/hooks/*.py`` all present and executable.
+  - ``jig-methodology.md`` rule present (sanity on post-a17 init).
+  ``--repair`` auto-fixes the two mechanical issues: it rewrites the
+  settings.json stanzas to ``sys.executable`` and re-copies any
+  missing hook from the wheel + ``chmod +x`` on hooks lacking the bit.
+  ``--dry-run`` prints the plan without writing. Both flags are opt-in;
+  the default ``jig doctor --project <path>`` is read-only.
+- Check status glyphs widened from ``✓ / ✗`` to ``✓ / ✗ / !`` so
+  non-fatal drift (e.g. "12 hooks present but not executable") reads
+  as warning, not failure.
+
+### Use case
+Projects scaffolded before 0.1.0a25 have stale ``python3`` in their
+``.claude/settings.json`` and the fix didn't auto-propagate on
+``jig-mcp`` upgrade (template code ran at scaffold time, not at
+runtime). ``jig doctor --project /path --repair`` brings them to the
+current template without having to re-run ``jig init`` (which would
+overwrite any hand-edited agents / rules / workflows).
+
 ## [0.1.0a25] — 2026-04-20
 
 ### Fixed
