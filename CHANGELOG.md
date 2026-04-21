@@ -4,6 +4,35 @@ All notable changes to `jig` are documented in this file. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and versioning
 adheres to [SemVer](https://semver.org/).
 
+## [0.1.0a24] — 2026-04-20
+
+### Added
+- **Vendored DeltaCodeCube exposed as internal proxy ``dcc``.** The
+  original plan called for ``engines.dcc.register_internal_proxy()``
+  at server startup so the 36-tool DCC surface is reachable via
+  ``execute_mcp_tool("dcc", "cube_detect_smells", …)`` and
+  ``proxy_tools_search`` without users having to ``proxy_add`` an
+  external DCC MCP. That wiring never landed in the port — DCC was
+  vendored as Python, but no MCP layer. Closed here by:
+  - New ``_tool_archive.archive_external_mcp(holder, proxy_name)``
+    helper that harvests tools from a FastMCP holder and registers
+    them as an internal proxy (embedding descriptions into the
+    cache so ``proxy_tools_search`` finds them).
+  - ``server._register_tools`` now creates a throwaway
+    ``_dcc_holder`` FastMCP, runs DCC's ``register_all_tools`` on
+    it, then calls ``archive_external_mcp(holder, "dcc")``. 36 tools
+    moved.
+- ``proxy_list`` now reports ``dcc`` alongside the 8 previous
+  internal proxies. Smell-delta injection in ``snapshot_trigger``
+  works out of the box once DCC's DB is populated (run
+  ``execute_mcp_tool("dcc", "index_project", …)`` once).
+
+### Clarified
+- ``memory_injector`` and ``smart_context`` hooks are silent by
+  design on a greenfield project — they inject context only when
+  matching ``.claude/memory/**`` files or pre-computed caches exist.
+  Silence is not a bug; documented the intended pre-conditions.
+
 ## [0.1.0a23] — 2026-04-20
 
 ### Fixed

@@ -74,6 +74,21 @@ def _register_tools() -> None:
     except Exception as e:  # pragma: no cover
         log.warning("[jig.server] tool archival failed: %s", e)
 
+    # Expose the vendored DeltaCodeCube as an internal proxy so its
+    # ~40 analysis tools are callable via ``execute_mcp_tool("dcc", …)``
+    # and discoverable via ``proxy_tools_search`` without the user
+    # having to register an external DCC MCP with ``proxy_add``.
+    try:
+        from fastmcp import FastMCP
+        from jig.engines.dcc.tools import register_all_tools as _dcc_register
+
+        dcc_holder = FastMCP(name="_dcc_holder")
+        _dcc_register(dcc_holder)
+        dcc_count = asyncio.run(_tool_archive.archive_external_mcp(dcc_holder, "dcc"))
+        log.info("[jig.server] DCC internal proxy: %d tools", dcc_count)
+    except Exception as e:  # pragma: no cover
+        log.warning("[jig.server] DCC internal proxy registration failed: %s", e)
+
 
 async def _warmup_embed_model() -> None:
     """Touch fastembed in background so the first search isn't slow."""

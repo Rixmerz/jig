@@ -86,6 +86,44 @@ ARCHIVE_MAP: dict[str, list[str]] = {
 }
 
 
+async def archive_external_mcp(holder: "FastMCP", proxy_name: str) -> int:
+    """Register every tool on ``holder`` as an internal proxy named
+    ``proxy_name``. Use for bundled MCPs (e.g. the vendored DCC) that
+    the plan calls for but that don't need to sit on jig's top-level
+    surface. Returns the count of tools registered.
+
+    The holder is a throwaway FastMCP instance — it's used only to
+    harvest the tool catalog that DCC's own `register_all_tools` wires
+    into a real MCP. We pull the FunctionTool objects off, copy their
+    (name, description, parameters, fn) into ``internal_proxy``, and
+    push the descriptions through ``embed_cache`` so
+    ``proxy_tools_search`` finds them.
+    """
+    tools = await holder.list_tools()
+    cache_payload: list[dict[str, object]] = []
+    count = 0
+    for t in tools:
+        handler = internal_proxy.InternalHandler(
+            name=t.name,
+            description=t.description or "",
+            input_schema=t.parameters or {},
+            fn=t.fn,
+        )
+        internal_proxy.register(proxy_name, handler)
+        cache_payload.append({
+            "name": t.name,
+            "description": handler.description,
+            "input_schema": handler.input_schema,
+        })
+        count += 1
+    if cache_payload:
+        try:
+            embed_cache.upsert_tools(proxy_name, cache_payload)
+        except Exception as e:  # pragma: no cover
+            log.warning("[jig.archive] embed_cache upsert for %s failed: %s", proxy_name, e)
+    return count
+
+
 async def archive_all(mcp: "FastMCP") -> dict[str, int]:
     """Move every tool listed in ARCHIVE_MAP to its internal proxy.
 

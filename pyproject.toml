@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "jig-mcp"
-version = "0.1.0a23"
+version = "0.1.0a24"
 description = "Just-in-time tool discovery and phase-enforced workflows for AI coding agents"
 readme = "README.md"
 requires-python = ">=3.10"
