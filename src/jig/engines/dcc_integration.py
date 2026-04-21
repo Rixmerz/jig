@@ -602,9 +602,23 @@ def _query_relevant_experiences(raw_results: dict, project_dir: str) -> list[dic
 # ============================================================================
 
 def _is_dcc_available() -> bool:
-    """Check if deltacodecube MCP is configured (without starting it)."""
+    """Check if DCC is reachable — vendored internal proxy or external MCP.
+
+    Order of checks:
+    1. ``internal_proxy["dcc"]`` — the vendored DeltaCodeCube registered
+       at server startup (0.1.0a24+). This is the primary path and
+       succeeds without any ``proxy_add`` on the user side.
+    2. ``deltacodecube`` in ``load_mcp_configs()`` — legacy external-MCP
+       path. Still honoured for users who run their own DCC subprocess.
+    """
+    try:
+        from jig.engines import internal_proxy
+        if internal_proxy.has_mcp("dcc"):
+            return True
+    except Exception:
+        pass
     configs = load_mcp_configs()
-    return "deltacodecube" in configs
+    return "deltacodecube" in configs or "dcc" in configs
 
 
 _DCC_DEFAULT_ANALYSES = ["stats", "smells", "security"]

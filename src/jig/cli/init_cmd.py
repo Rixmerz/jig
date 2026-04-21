@@ -258,10 +258,23 @@ def _copy_assets(claude_dir: Path) -> None:
             if item.is_file() and item.name in BASE_RULES:
                 (claude_dir / "rules" / item.name).write_bytes(item.read_bytes())
 
-    # 4. settings.json from template
+    # 4. settings.json from template. Substitute the bare ``python3``
+    # command with ``sys.executable`` — the Python that the jig-mcp tool
+    # install uses. Claude Code spawns hooks by literal command-string;
+    # a bare ``python3`` picks up whatever interpreter happens to be on
+    # ``PATH``, which usually lacks jig's dependencies and silently
+    # fails to run anything that imports ``jig.engines``.
     settings_src = assets_path / "settings.template.json"
     if settings_src.is_file():
-        (claude_dir / "settings.json").write_bytes(settings_src.read_bytes())
+        raw = settings_src.read_text(encoding="utf-8")
+        # Only replace at word boundaries so "python3" inside a path or
+        # identifier is untouched. The template shape is
+        # ``"command": "python3 \"$CLAUDE_PROJECT_DIR/..."``.
+        rewired = raw.replace(
+            '"command": "python3 ',
+            f'"command": "{sys.executable} ',
+        )
+        (claude_dir / "settings.json").write_text(rewired, encoding="utf-8")
 
     print(
         f"[jig.init] populated {claude_dir}/ "

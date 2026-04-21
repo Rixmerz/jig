@@ -4,6 +4,30 @@ All notable changes to `jig` are documented in this file. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and versioning
 adheres to [SemVer](https://semver.org/).
 
+## [0.1.0a25] — 2026-04-20
+
+### Fixed
+- **B15:** ``graph_mid_phase_dcc`` reported "DCC not configured" even
+  after 0.1.0a24 exposed DCC as an internal proxy. The detector
+  (``dcc_integration._is_dcc_available``) still only queried the
+  legacy external-MCP config. It now checks the internal_proxy
+  registry first (primary path — the vendored DCC),
+  falls back to the external config (for users who run their own DCC
+  subprocess). ``dcc`` as a registered proxy name is also accepted,
+  not just ``deltacodecube``.
+- **B16:** ``jig init`` rendered ``settings.json`` with bare
+  ``python3`` in every hook command. Claude Code spawns hooks by
+  literal command-string; a bare ``python3`` picks up whatever
+  interpreter is on ``PATH``, which usually does not have jig's
+  dependencies — so every Python hook (``snapshot_trigger``,
+  ``dcc_feedback``, ``experience_recorder``, etc.) failed silently
+  at ``import jig.engines...``. ``_copy_assets`` now substitutes
+  ``"python3 "`` with ``sys.executable`` + space, so hooks run under
+  the same Python that jig-mcp itself runs under — the ``uv tool
+  install`` env that has every dep available. Side effect: the
+  generated ``settings.json`` now contains an absolute python path;
+  moving jig to a different env requires a ``jig init`` re-run.
+
 ## [0.1.0a24] — 2026-04-20
 
 ### Added
