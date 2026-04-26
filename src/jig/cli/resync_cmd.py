@@ -61,7 +61,7 @@ def run(args: argparse.Namespace) -> int:
     print("    • rules/        ← jig assets (base rules only; stack rules if --agents)")
     print("    • commands/     ← jig assets")
     print("    • workflows/    ← jig assets")
-    print("    • settings.json ← NOT touched (project-local)")
+    print("    • settings.json ← patched (adds missing hooks, preserves existing)")
     print("    • .mcp.json     ← NOT touched (project-local)")
     if args.agents:
         print(f"    • agents/skills ← deploy_project_agents({args.agents})")
@@ -72,6 +72,7 @@ def run(args: argparse.Namespace) -> int:
 
     from jig.cli.init_cmd import _copy_assets
     _copy_assets(claude_dir)
+    _patch_settings(claude_dir)
 
     if args.agents:
         _resync_agents(target, args.agents)
@@ -83,6 +84,43 @@ def run(args: argparse.Namespace) -> int:
     if args.agents:
         print(f"   Agents deployed for: {', '.join(args.agents)}")
     return 0
+
+
+def _patch_settings(claude_dir: Path) -> None:
+    """Add missing UserPromptSubmit hook to existing settings.json without rewriting it."""
+    import json
+    import sys
+
+    settings_path = claude_dir / "settings.json"
+    if not settings_path.exists():
+        return
+
+    try:
+        data = json.loads(settings_path.read_text(encoding="utf-8"))
+    except Exception as e:
+        print(f"[jig.resync] could not parse settings.json: {e}", file=sys.stderr)
+        return
+
+    hooks = data.setdefault("hooks", {})
+    if "UserPromptSubmit" in hooks:
+        return  # already present, don't touch
+
+    hook_entry = [
+        {
+            "matcher": "*",
+            "hooks": [
+                {
+                    "type": "command",
+                    "command": f"{sys.executable} \"$CLAUDE_PROJECT_DIR/.claude/hooks/user_memory_injector.py\"",
+                    "timeout": 5,
+                }
+            ],
+        }
+    ]
+    # Insert UserPromptSubmit as the first key for readability
+    data["hooks"] = {"UserPromptSubmit": hook_entry, **hooks}
+    settings_path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+    print("[jig.resync] patched settings.json: added UserPromptSubmit hook")
 
 
 def _resync_agents(target: Path, tech_stack: list[str]) -> None:
