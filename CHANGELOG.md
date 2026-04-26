@@ -4,6 +4,76 @@ All notable changes to `jig` are documented in this file. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and versioning
 adheres to [SemVer](https://semver.org/).
 
+## [0.1.0a28] — 2026-04-26
+
+### Added
+
+- **User-level memory store** (`~/.jig/memory/`) with MCP tools
+  `memory_get`, `memory_set`, `memory_delete`. Rich schema: TTL,
+  priority (`high` / `normal` / `low`), tags, links, type
+  (`feedback` / `project` / `user` / `reference`). Separate from
+  Claude Code's native `~/.claude/` memory; adds scoring by
+  relevance + recency, link expansion, and TTL-based expiry.
+
+- **Two-tier memory injection** (`UserPromptSubmit` hook). Memories
+  travel from the user-level brain (`~/.jig/memory/`) exactly once
+  per project — on first relevant prompt they are injected AND cached
+  into `.claude/memory/`. Subsequent prompts skip re-injection
+  entirely (zero token duplication). Cache invalidates automatically
+  when the global source is updated (mtime comparison).
+
+- **Semantic embedding for memory matching.** `user_memory_injector`
+  now uses fastembed cosine similarity (`BAAI/bge-large-en-v1.5`,
+  same model already cached for tool search) when
+  `JIG_MEMORY_SEMANTIC=1` is set. Falls back to keyword overlap on
+  any error. Enables synonym matching — "headless browser scraping"
+  now finds a memory tagged `browser` without the exact word.
+
+- **SessionStart bootstrap hook** (`session_bootstrap.py`). Injects
+  pending `next_task` context and warns if DCC is indexed on a
+  different project. 5-second SIGALRM timeout; silent when nothing
+  to report.
+
+- **Stop hook for session knowledge capture**
+  (`session_knowledge_capture.py`). Reads the session transcript
+  on close, counts `memory_set` calls and git commits, prints a
+  brief summary if there's anything worth noting. Always exits 0;
+  never blocks session close.
+
+- **DCC scope check in `jig doctor`**. `_check_dcc_injection` now
+  queries `code_points` for rows matching `CLAUDE_PROJECT_DIR`.
+  Reports `[!]` when `dcc.db` has data from a *different* project,
+  and includes the indexed file count in the pass message.
+
+- **`jig resync` cleans stale `.claude/memory/`**. After copying
+  fresh assets, `_clean_stale_project_memory` removes local cache
+  copies whose global source in `~/.jig/memory/` was deleted, and
+  refreshes entries where the global file is newer.
+
+- **`jig update` command** — single command to upgrade `jig-mcp`
+  via `uv tool upgrade` and resync all scaffolded projects.
+  Supports `--project`, `--no-resync`, `--dry-run`.
+
+- **`_patch_settings` refactored** into idempotent per-hook helpers
+  (`_ensure_user_prompt_submit_hook`, `_ensure_session_bootstrap_hook`,
+  `_ensure_stop_hook`). Running `jig resync` on any project now
+  installs all three hooks without rewriting unrelated settings.
+
+- **Explicit proxy discovery rule** in `jig-methodology.md`. When
+  the user names a proxy by name (e.g. "use obscura"), the first
+  action is always `proxy_tools_search(query="<name>")` before any
+  `execute_mcp_tool` call.
+
+### Fixed
+
+- **DCC orphan smell noise** — `dcc.db` was indexed on `test-jig`
+  instead of the active project. `jig doctor` now detects and reports
+  this. Re-index with `cube_index_directory(path='src/')`.
+
+- **`_EXPECTED_HOOKS`** updated to include `session_bootstrap.py`,
+  `session_knowledge_capture.py`, and `user_memory_injector.py`
+  (previously missing). `jig doctor` now flags missing entries.
+
 ## [0.1.0a27] — 2026-04-21
 
 ### Added (doctor extensions)

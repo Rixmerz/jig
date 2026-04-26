@@ -2,6 +2,7 @@
 
 **Just-in-time tool discovery and phase-enforced workflows for AI coding agents.**
 
+
 `jig` is a Python MCP server designed to be the *only* MCP in your
 `.mcp.json`. It proxies every other MCP you use (Serena, Sequential
 Thinking, Context7, Playwright, and so on), exposes a small surface
@@ -132,8 +133,18 @@ the `.mcp.json` never changes.
 - **Workflow phase gates** — YAML graphs with `tools_blocked`,
   `mcps_enabled`, and `tension_gate` keep agents from skipping the
   phase you said they must think in.
-- **Hooks** — PreToolUse injects memory + experience + smart context.
-  PostToolUse reports DCC deltas, captures lessons, snapshots state.
+- **User-level memory** (`~/.jig/memory/`) — cross-project knowledge
+  store with TTL, priority, tags, and link expansion. MCP tools:
+  `memory_get`, `memory_set`, `memory_delete`.
+- **Two-tier memory injection** — memories travel from the user brain
+  to `.claude/memory/` exactly once per project. Subsequent prompts
+  are silent (zero token duplication). Semantic matching via fastembed
+  (`JIG_MEMORY_SEMANTIC=1`); falls back to keyword overlap.
+- **Hooks** — `UserPromptSubmit` injects relevant user memories.
+  `SessionStart` bootstraps pending task context + DCC health.
+  `Stop` surfaces a session summary (memories saved, commits made).
+  `PreToolUse` injects experience + smart context before edits.
+  `PostToolUse` reports DCC deltas, captures lessons, snapshots state.
 
 ## What jig is not
 
@@ -171,10 +182,18 @@ details; [`docs/tools.md`](docs/tools.md) for the full tool reference;
 
 ## Status
 
-**Alpha (0.1.0a17).** All 150 tests green. Fresh-VM E2E validated
-(see [`scripts/fresh-vm-e2e.sh`](scripts/fresh-vm-e2e.sh)). API
-surface is subject to change before `0.1.0` stable. Next milestone is
-PyPI publish; see [`ROADMAP.md`](ROADMAP.md).
+**Alpha (0.1.0a28).** API surface is subject to change before `0.1.0`
+stable. Next milestone is PyPI publish; see [`ROADMAP.md`](ROADMAP.md).
+
+### CLI
+
+```bash
+jig init /path/to/project       # scaffold hooks, rules, settings.json
+jig resync /path/to/project     # update assets after jig upgrade
+jig update                      # upgrade jig-mcp + resync CWD
+jig doctor --project .          # diagnostics + DCC scope check
+jig memory-gc --stats           # user memory store stats
+```
 
 ## License
 
