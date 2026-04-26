@@ -43,6 +43,7 @@ def _register_tools() -> None:
         metadata,
         memory,
         next_task as next_task_tools,
+        resync,
         patterns,
         proxy,
         snapshot,
@@ -61,6 +62,7 @@ def _register_tools() -> None:
     next_task_tools.register_next_task_tools(mcp)
     graph_enforcer_control.register_graph_enforcer_control_tools(mcp)
     memory.register_memory_tools(mcp)
+    resync.register_resync_tools(mcp)
 
     try:
         from jig.tools.graph import register_all as register_graph
