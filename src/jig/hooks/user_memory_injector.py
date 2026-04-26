@@ -157,8 +157,14 @@ def _project_memory_dir() -> Path | None:
 
 
 def _is_cached(node_id: str, memory_dir: Path) -> bool:
-    """True if this memory is already copied into the project cache."""
-    return (memory_dir / f"{node_id}.md").exists()
+    """True if project cache copy exists AND is not older than the global source."""
+    local = memory_dir / f"{node_id}.md"
+    if not local.exists():
+        return False
+    global_src = MEMORY_DIR / f"{node_id}.md"
+    if not global_src.exists():
+        return True  # global deleted — keep local as-is, gc will handle it
+    return local.stat().st_mtime >= global_src.stat().st_mtime
 
 
 def _cache_memory(node: dict, raw_text: str, memory_dir: Path) -> None:
