@@ -1,11 +1,11 @@
 # jig Methodology
 
 > The canonical way to work inside a jig-scaffolded project. Every
-> Claude Code session loaded this rule implicitly via `.claude/rules/`
+> Claude Code session loads this rule implicitly via `.claude/rules/`
 > after `jig init`.
 
 jig collapses every MCP you have configured into a single server that
-exposes ~26 tools at session start. The remaining 30+ operations live
+exposes ~29 tools at session start. The remaining 30+ operations live
 in internal proxies and are discovered on demand via semantic search.
 Work the flow the way jig was designed, and you'll see the delta
 between "hundreds of schemas" and "the right toolbox per task."
@@ -19,10 +19,10 @@ between "hundreds of schemas" and "the right toolbox per task."
    the tool does; don't invent assumptions.
 
 2. **Invoke via `execute_mcp_tool`.** Internal proxies (`graph`,
-   `snapshot`, `experience`, `trend`, `pattern`, `metadata`,
-   `workflow`, `session`) are in-process Python; subprocess proxies
-   spawn on demand and idle out after 10 minutes. Both go through the
-   same entry point: `execute_mcp_tool(mcp_name, tool_name, arguments)`.
+   `snapshot`, `experience`, `trend`, `pattern`, `metadata`) are
+   in-process Python; subprocess proxies spawn on demand and idle out
+   after 10 minutes. Both go through the same entry point:
+   `execute_mcp_tool(mcp_name, tool_name, arguments)`.
 
 3. **Let the enforcer talk.** A `graph_activate` workflow can block
    tools (e.g. Edit/Write) until you've called specific others
@@ -43,13 +43,34 @@ between "hundreds of schemas" and "the right toolbox per task."
    signals — if a smell went from none to critical in one edit, pause
    and consider the reason before moving on.
 
+## Where to find what
+
+| I need to… | Tool / command |
+|---|---|
+| Run a workflow phase | `graph_traverse` (surface) |
+| See workflow state | `graph_status` (surface) |
+| List available workflows | `proxy_tools_search(query="graph list available")` → `execute_mcp_tool("graph", "graph_list_available", {})` |
+| Build a new workflow | `proxy_tools_search(query="graph builder create")` → `execute_mcp_tool("graph", "graph_builder_create", {…})` |
+| Roll back a snapshot | `proxy_tools_search(query="snapshot restore")` → `execute_mcp_tool("snapshot", "snapshot_restore", {"snap_id": "…"})` |
+| Query past learnings | `experience_query(file_path="…")` (surface) |
+| Record a learning | `experience_record(…)` (surface) |
+| Save a cross-project memory | `memory_set(id, name, …)` (surface) |
+| Retrieve relevant memories | `memory_get(tags=["…"])` (surface) |
+| Clean up expired memories | `jig memory-gc` (CLI) |
+| Register a new MCP proxy | `proxy_add(name, command, args)` (surface) |
+| Search proxy tools | `proxy_tools_search(query="…")` (surface) |
+| Call any proxy tool | `execute_mcp_tool(mcp_name, tool_name, arguments)` (surface) |
+| Deploy agents to a project | `deploy_project_agents(project_path, tech_stack)` (surface) or `/setup-agents` |
+| Re-scaffold a project | `jig_init_project(project_path)` (surface) |
+| Diagnose jig health | `jig doctor` (CLI) |
+
 ## Surface vs archived
 
 | Layer | What lives there | How to reach it |
-|-------|------------------|------------------|
-| Surface (26 tools) | hot-path operations: proxy_*, graph_{activate,status,traverse,reset,list_available,timeline}, experience_{record,query,stats}, jig_version, jig_guide, jig_init_project, deploy_project_agents, execute_mcp_tool, … | Call directly by name. |
-| Internal proxies | 30+ niche ops: every `graph_builder_*`, `graph_check_*`, `pattern_catalog_generate`, `trend_record_snapshot`, etc. | `proxy_tools_search` → `execute_mcp_tool`. |
-| Subprocess proxies | any MCP the user registered with `proxy_add` (Serena, Context7, Playwright, …). | Same path as internal. |
+|-------|------------------|-----------------|
+| Surface (~29 tools) | `proxy_*`, `graph_{activate,status,traverse,reset,list_available,timeline}`, `experience_{record,query,stats}`, `memory_{get,set,delete}`, `jig_version`, `jig_guide`, `jig_init_project`, `deploy_project_agents`, `execute_mcp_tool`, `next_task_*`, `trend_get_summary` | Call directly by name. |
+| Internal proxies | `graph_builder_*`, `graph_check_*`, `snapshot_*`, `pattern_catalog_*`, `trend_record_*`, etc. | `proxy_tools_search` → `execute_mcp_tool`. |
+| Subprocess proxies | Any MCP registered with `proxy_add` (obscura, sequentialthinking, …). | Same path as internal. |
 
 If you're tempted to search PATH for a CLI or shell out to `git` when
 jig has a direct tool, stop — use the tool. `graph_timeline` beats
@@ -58,12 +79,18 @@ beats re-reading old commit messages.
 
 ## Good habits
 
+- **Run `/setup-agents` after `jig init`** — or after updating jig —
+  to deploy specialized subagents and skills for your tech stack.
+  Re-run it if the stack changes.
 - **Look at `jig_guide(topic=…)` before unfamiliar work.** Topics:
   `getting-started`, `create-workflow`, `proxy-design`, `snapshots`,
   `tensions`. They're short and grounded in the real tool surface.
 - **Prefer `experience_query` for "have I seen this before?"** It's
   ranked by semantic relevance to the file path you're touching,
   not by textual match to a commit message.
+- **Use `memory_get(tags=[…])` for cross-project knowledge.** Unlike
+  experience (per-project), memory persists at `~/.jig/memory/` and
+  surfaces across all projects.
 - **Lean on `project_metadata_get` for scaffolding decisions.** Next
   migration number, bounded contexts, tech stack, test runner — all
   auto-discovered and cached 1 h. Don't re-scan the filesystem.
