@@ -1,11 +1,12 @@
 """CLI entry point dispatcher.
 
 Subcommands:
-    serve    — start the MCP server on stdio (default when invoked with no args)
-    init     — scaffold a project: migrate .mcp.json, copy hooks/rules/skills, warm cache
-    doctor   — diagnostics: embedding model, proxy reachability, cache integrity
-    graph    — out-of-band graph state management (reset/status without MCP)
-    version  — print version and exit
+    serve      — start the MCP server on stdio (default when invoked with no args)
+    init       — scaffold a project: migrate .mcp.json, copy hooks/rules/skills, warm cache
+    doctor     — diagnostics: embedding model, proxy reachability, cache integrity
+    graph      — out-of-band graph state management (reset/status without MCP)
+    memory-gc  — garbage collect stale user-level memory files (~/.claude/projects/)
+    version    — print version and exit
 
 Invocation:
     jig            → equivalent to `jig serve`
@@ -93,6 +94,9 @@ def _build_parser() -> argparse.ArgumentParser:
 
     from jig.cli import graph_cmd
     graph_cmd.add_parser(sub)
+
+    from jig.cli import memory_gc
+    memory_gc.add_parser(sub)
 
     return parser
 
