@@ -153,7 +153,10 @@ def main():
                 "message": (
                     f"[Graph Enforcer] Tool '{tool_name}' is blocked at node "
                     f"'{current_node}' (workflow: {active_graph}). "
-                    f"Advance the workflow to use this tool."
+                    f"Advance the workflow with graph_traverse to use this tool. "
+                    f"If the MCP server is unreachable and you cannot call "
+                    f"graph_reset, run `jig graph reset --project "
+                    f"{project_dir}` from a terminal to clear the state."
                 )
             }))
             return

@@ -4,6 +4,7 @@ Subcommands:
     serve    — start the MCP server on stdio (default when invoked with no args)
     init     — scaffold a project: migrate .mcp.json, copy hooks/rules/skills, warm cache
     doctor   — diagnostics: embedding model, proxy reachability, cache integrity
+    graph    — out-of-band graph state management (reset/status without MCP)
     version  — print version and exit
 
 Invocation:
@@ -11,6 +12,7 @@ Invocation:
     jig serve      → explicit serve mode
     jig init PATH  → scaffold
     jig doctor     → diagnostics
+    jig graph reset → clear stuck graph state (escape hatch)
     jig --version  → version
 """
 from __future__ import annotations
@@ -88,6 +90,9 @@ def _build_parser() -> argparse.ArgumentParser:
         help="With --repair, print the plan without touching anything",
     )
     doctor.set_defaults(func=_cmd_doctor)
+
+    from jig.cli import graph_cmd
+    graph_cmd.add_parser(sub)
 
     return parser
 
