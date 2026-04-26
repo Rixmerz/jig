@@ -4,6 +4,7 @@ Subcommands:
     serve      — start the MCP server on stdio (default when invoked with no args)
     init       — scaffold a project: migrate .mcp.json, copy hooks/rules/skills, warm cache
     resync     — update hooks/rules/commands/workflows in an existing jig project (no .mcp.json touch)
+    update     — upgrade jig-mcp via uv tool upgrade + resync scaffolded projects
     doctor     — diagnostics: embedding model, proxy reachability, cache integrity
     graph      — out-of-band graph state management (reset/status without MCP)
     memory-gc  — garbage collect stale user-level memory files (~/.jig/memory/)
@@ -101,6 +102,9 @@ def _build_parser() -> argparse.ArgumentParser:
 
     from jig.cli import resync_cmd
     resync_cmd.add_parser(sub)
+
+    from jig.cli import update_cmd
+    update_cmd.add_parser(sub)
 
     return parser
 
