@@ -55,6 +55,39 @@ def _read_next_task(project_dir: str) -> str | None:
     return "\n".join(lines)
 
 
+def _read_recent_experience(project_dir: str, n: int = 3) -> str | None:
+    """Return a markdown block with top-n experience entries by occurrences."""
+    project_name = Path(project_dir).name
+    exp_path = (
+        Path.home()
+        / ".local"
+        / "share"
+        / "jig"
+        / "project_memories"
+        / project_name
+        / "experience_memory.json"
+    )
+    if not exp_path.exists():
+        return None
+    try:
+        data = json.loads(exp_path.read_text(encoding="utf-8"))
+        entries = data.get("entries", [])
+        if not entries:
+            return None
+        entries_sorted = sorted(entries, key=lambda e: e.get("occurrences", 0), reverse=True)
+        top = entries_sorted[:n]
+        lines = ["### Recent Experience"]
+        for e in top:
+            pattern = e.get("file_pattern", "?")
+            etype = e.get("type", "?")
+            resolution = (e.get("resolution") or "")[:80]
+            occ = e.get("occurrences", 0)
+            lines.append(f"- `{pattern}` ({etype}, ×{occ}): {resolution}")
+        return "\n".join(lines)
+    except Exception:
+        return None
+
+
 def _check_dcc_scope(project_dir: str) -> str | None:
     """Return warning string if dcc.db has no files from this project."""
     db_path = Path.home() / ".local" / "share" / "jig" / "dcc.db"
@@ -96,6 +129,13 @@ def main() -> None:
     next_task_block = _read_next_task(project_dir)
     if next_task_block:
         sections.append(next_task_block)
+
+    try:
+        experience_block = _read_recent_experience(project_dir)
+        if experience_block:
+            sections.append(experience_block)
+    except Exception:
+        pass
 
     dcc_warning = _check_dcc_scope(project_dir)
     if dcc_warning:

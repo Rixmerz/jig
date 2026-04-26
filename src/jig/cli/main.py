@@ -7,6 +7,7 @@ Subcommands:
     update     — upgrade jig-mcp via uv tool upgrade + resync scaffolded projects
     doctor     — diagnostics: embedding model, proxy reachability, cache integrity
     graph      — out-of-band graph state management (reset/status without MCP)
+    memory     — list or search user-level memories (~/.jig/memory/)
     memory-gc  — garbage collect stale user-level memory files (~/.jig/memory/)
     version    — print version and exit
 
@@ -96,6 +97,9 @@ def _build_parser() -> argparse.ArgumentParser:
 
     from jig.cli import graph_cmd
     graph_cmd.add_parser(sub)
+
+    from jig.cli import memory_cmd
+    memory_cmd.add_parser(sub)
 
     from jig.cli import memory_gc
     memory_gc.add_parser(sub)

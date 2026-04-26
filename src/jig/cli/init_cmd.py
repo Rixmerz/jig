@@ -236,7 +236,9 @@ def _copy_assets(claude_dir: Path) -> None:
             if entry.name != "_common.py":
                 continue
         if entry.is_file():
-            (claude_dir / "hooks" / entry.name).write_bytes(entry.read_bytes())
+            dest_path = claude_dir / "hooks" / entry.name
+            dest_path.write_bytes(entry.read_bytes())
+            dest_path.chmod(dest_path.stat().st_mode | 0o111)  # chmod +x
 
     # 2. Commands + workflows: copy wholesale
     import jig.assets as assets_pkg

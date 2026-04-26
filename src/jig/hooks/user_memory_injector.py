@@ -21,9 +21,12 @@ Protocol:
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import re
+import sqlite3
+import struct
 import sys
 import time
 from pathlib import Path
@@ -69,6 +72,59 @@ def _build_memory_text(node: dict) -> str:
     tags = node.get("tags", [])
     tags_str = " ".join(tags) if isinstance(tags, list) else str(tags)
     return f"{node.get('name', '')} {node.get('description', '')} {tags_str}"
+
+
+_EMBED_CACHE_PATH = Path.home() / ".jig" / "memory_embeddings.db"
+
+
+def _text_hash(text: str) -> str:
+    return hashlib.sha256(text.encode()).hexdigest()[:16]
+
+
+def _load_embed_cache() -> dict[str, tuple[str, list[float]]]:
+    """Load {node_id: (text_hash, vector)} from cache. Returns {} on any error."""
+    try:
+        conn = sqlite3.connect(str(_EMBED_CACHE_PATH), timeout=2)
+        conn.execute(
+            "CREATE TABLE IF NOT EXISTS embeddings "
+            "(node_id TEXT PRIMARY KEY, text_hash TEXT NOT NULL, "
+            "vector BLOB NOT NULL, updated_at REAL NOT NULL)"
+        )
+        rows = conn.execute("SELECT node_id, text_hash, vector FROM embeddings").fetchall()
+        conn.close()
+        result: dict[str, tuple[str, list[float]]] = {}
+        for node_id, th, blob in rows:
+            n = len(blob) // 4
+            vec = list(struct.unpack(f"{n}f", blob))
+            result[node_id] = (th, vec)
+        return result
+    except Exception:
+        return {}
+
+
+def _save_embed_cache(updates: dict[str, tuple[str, list[float]]]) -> None:
+    """Persist new/updated embeddings to cache. Silent on error."""
+    if not updates:
+        return
+    try:
+        conn = sqlite3.connect(str(_EMBED_CACHE_PATH), timeout=2)
+        conn.execute(
+            "CREATE TABLE IF NOT EXISTS embeddings "
+            "(node_id TEXT PRIMARY KEY, text_hash TEXT NOT NULL, "
+            "vector BLOB NOT NULL, updated_at REAL NOT NULL)"
+        )
+        now = time.time()
+        for node_id, (th, vec) in updates.items():
+            blob = struct.pack(f"{len(vec)}f", *vec)
+            conn.execute(
+                "INSERT OR REPLACE INTO embeddings (node_id, text_hash, vector, updated_at) "
+                "VALUES (?, ?, ?, ?)",
+                (node_id, th, blob, now),
+            )
+        conn.commit()
+        conn.close()
+    except Exception:
+        pass
 
 _STOP_WORDS = frozenset({
     "a", "an", "the", "and", "or", "but", "in", "on", "at", "to", "for",
@@ -236,9 +292,41 @@ def main() -> None:
     if use_semantic and prompt and _init_embedder():
         try:
             prompt_vec: list[float] = _embedder_instance.embed_one(prompt)  # type: ignore[union-attr]
-            texts = [_build_memory_text(n) for n in rest]
-            vecs = list(_embedder_instance.embed_many(texts))  # type: ignore[union-attr]
-            memory_vecs = {rest[i]["id"]: vecs[i] for i in range(len(rest))}
+
+            # Load cache and partition rest into cached vs needs-embedding
+            embed_cache = _load_embed_cache()
+            to_embed_nodes: list[dict] = []
+            to_embed_texts: list[str] = []
+            cached_vecs: dict[str, list[float]] = {}
+
+            for n in rest:
+                text = _build_memory_text(n)
+                th = _text_hash(text)
+                cached = embed_cache.get(n["id"])
+                if cached and cached[0] == th:
+                    cached_vecs[n["id"]] = cached[1]
+                else:
+                    to_embed_nodes.append(n)
+                    to_embed_texts.append(text)
+
+            # Only embed what's not cached
+            new_vecs: dict[str, list[float]] = {}
+            if to_embed_texts:
+                vecs_list = list(_embedder_instance.embed_many(to_embed_texts))  # type: ignore[union-attr]
+                for i, n in enumerate(to_embed_nodes):
+                    new_vecs[n["id"]] = vecs_list[i]
+
+            # Save new embeddings to cache
+            cache_updates = {
+                n["id"]: (_text_hash(_build_memory_text(n)), new_vecs[n["id"]])
+                for n in to_embed_nodes
+                if n["id"] in new_vecs
+            }
+            _save_embed_cache(cache_updates)
+
+            # Merge cached + new
+            memory_vecs = {**cached_vecs, **new_vecs}
+
             relevant = [
                 n for n in rest
                 if _cosine(prompt_vec, memory_vecs.get(n["id"], [])) >= MIN_SEMANTIC_SCORE
