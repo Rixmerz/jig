@@ -41,6 +41,7 @@ def _register_tools() -> None:
         graph_enforcer_control,
         guide,
         metadata,
+        memory,
         next_task as next_task_tools,
         patterns,
         proxy,
@@ -59,6 +60,7 @@ def _register_tools() -> None:
     config_tools.register_config_tools(mcp)
     next_task_tools.register_next_task_tools(mcp)
     graph_enforcer_control.register_graph_enforcer_control_tools(mcp)
+    memory.register_memory_tools(mcp)
 
     try:
         from jig.tools.graph import register_all as register_graph
