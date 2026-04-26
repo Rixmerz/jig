@@ -1,29 +1,56 @@
 #!/usr/bin/env python3
 """User Memory Injector — UserPromptSubmit hook.
 
-Injects relevant memories from ~/.jig/memory/ at the start of each prompt.
-Memories are user-level (cross-project) — same knowledge across all sessions.
+Two-tier memory architecture:
+  ~/.jig/memory/          = user-level brain (global, cross-project)
+  $PROJECT/.claude/memory/ = project cache (local copies of recalled memories)
+
+On each prompt:
+  1. Score user memories by keyword relevance to the prompt
+  2. Check which relevant memories are NOT yet in the project cache
+  3. Inject only the uncached ones (avoids token duplication)
+  4. Copy injected memories into .claude/memory/ so future prompts skip them
+
+Result: a memory is injected exactly once per project, then lives locally.
+The existing memory_injector.py (PreToolUse) reads .claude/memory/ on edits.
 
 Protocol:
-  stdin:  {"session_id": "...", "transcript_path": "...", "hook_event_name": "UserPromptSubmit"}
+  stdin:  {"session_id": "...", "transcript_path": "...", "hook_event_name": "UserPromptSubmit", "prompt": "..."}
   stdout: injected context block (shown to Claude as additional context)
-  stderr: ignored
   exit 0: always
-
-Selection strategy:
-  1. Always include priority:high nodes (safety net)
-  2. For remaining budget: score by type, recency, and expiry
-  3. Never exceed TOKEN_BUDGET characters total
 """
 from __future__ import annotations
 
 import json
+import os
+import re
 import sys
 import time
 from pathlib import Path
 
-TOKEN_BUDGET = 4000  # chars (~1000 tokens), keep injection lean
+TOKEN_BUDGET = 4000  # chars (~1000 tokens)
+MIN_KEYWORD_OVERLAP = 0.08  # minimum keyword-only overlap to include a node
 MEMORY_DIR = Path.home() / ".jig" / "memory"
+
+_STOP_WORDS = frozenset({
+    "a", "an", "the", "and", "or", "but", "in", "on", "at", "to", "for",
+    "of", "with", "by", "from", "is", "it", "its", "be", "as", "are",
+    "was", "were", "has", "have", "had", "do", "does", "did", "will",
+    "would", "could", "should", "may", "might", "can", "this", "that",
+    "these", "those", "i", "we", "you", "he", "she", "they", "me", "us",
+    "him", "her", "them", "my", "our", "your", "his", "their", "what",
+    "how", "why", "when", "where", "which", "who", "not", "no", "so",
+    "if", "then", "than", "also", "just", "more", "some", "any", "all",
+    "there", "here", "now", "up", "out", "about", "into", "over", "after",
+    "el", "la", "los", "las", "un", "una", "de", "del", "en", "es", "se",
+    "que", "por", "para", "con", "una", "su", "al", "lo", "si", "pero",
+    "como", "ya", "o", "y", "e", "u", "no", "hay", "le", "les", "te",
+})
+
+
+def _keywords(text: str) -> set[str]:
+    words = re.findall(r"[a-záéíóúñüA-ZÁÉÍÓÚÑÜ_][a-záéíóúñüA-ZÁÉÍÓÚÑÜ0-9_]*", text.lower())
+    return {w for w in words if len(w) > 2 and w not in _STOP_WORDS}
 
 
 def _parse_frontmatter(text: str) -> tuple[dict, str]:
@@ -54,14 +81,11 @@ def _parse_frontmatter(text: str) -> tuple[dict, str]:
 
 
 def _parse_ttl(ttl_str: str) -> float | None:
-    """Return TTL in seconds, or None if unparseable."""
-    import re
     m = re.match(r"^(\d+)([dhw])$", ttl_str.strip())
     if not m:
         return None
     n, unit = int(m.group(1)), m.group(2)
-    mult = {"d": 86400, "h": 3600, "w": 604800}
-    return n * mult.get(unit, 86400)
+    return n * {"d": 86400, "h": 3600, "w": 604800}[unit]
 
 
 def _load_memories() -> list[dict]:
@@ -76,10 +100,8 @@ def _load_memories() -> list[dict]:
         ttl_str = fm.get("ttl", "")
         if ttl_str:
             ttl_secs = _parse_ttl(ttl_str)
-            if ttl_secs is not None:
-                age = time.time() - f.stat().st_mtime
-                if age > ttl_secs:
-                    continue  # expired
+            if ttl_secs is not None and (time.time() - f.stat().st_mtime) > ttl_secs:
+                continue
         nodes.append({
             "id": fm.get("id") or f.stem,
             "name": fm.get("name", f.stem),
@@ -93,12 +115,27 @@ def _load_memories() -> list[dict]:
     return nodes
 
 
-def _score(node: dict) -> float:
-    priority_boost = {"high": 1.0, "normal": 0.0, "low": -0.5}.get(node["priority"], 0.0)
-    # type weight: feedback and user knowledge are most actionable
-    type_boost = {"feedback": 0.3, "user": 0.2, "project": 0.1, "reference": 0.0}.get(node["type"], 0.0)
-    recency = 1.0 / (1.0 + (time.time() - node["mtime"]) / 86400)
-    return priority_boost + type_boost + recency * 0.1
+def _keyword_overlap(node: dict, prompt_kw: set[str]) -> float:
+    """Pure keyword overlap score — used for threshold gating."""
+    if not prompt_kw:
+        return 0.0
+    tag_kw = _keywords(" ".join(node["tags"]))
+    name_kw = _keywords(node["name"])
+    desc_kw = _keywords(node["description"])
+    body_kw = _keywords(node["body"][:800])
+    tag_s = len(prompt_kw & tag_kw) / (len(tag_kw) + 1) * 1.5
+    name_s = len(prompt_kw & name_kw) / (len(name_kw) + 1) * 1.2
+    desc_s = len(prompt_kw & desc_kw) / (len(desc_kw) + 1) * 0.8
+    body_s = len(prompt_kw & body_kw) / (len(body_kw) + 1) * 0.4
+    return tag_s + name_s + desc_s + body_s
+
+
+def _relevance(node: dict, prompt_kw: set[str]) -> float:
+    """Full ranking score — used for ordering, after threshold gate passes."""
+    base = _keyword_overlap(node, prompt_kw)
+    type_boost = {"feedback": 0.15, "user": 0.10, "project": 0.05, "reference": 0.0}.get(node["type"], 0.0)
+    recency = 1.0 / (1.0 + (time.time() - node["mtime"]) / 86400) * 0.05
+    return base + type_boost + recency
 
 
 def _format(node: dict) -> str:
@@ -110,39 +147,90 @@ def _format(node: dict) -> str:
     return "\n".join(parts)
 
 
-def main() -> None:
+def _project_memory_dir() -> Path | None:
+    """Return .claude/memory/ for the current project, or None if not in a project."""
+    project_dir = os.environ.get("CLAUDE_PROJECT_DIR", "")
+    if not project_dir:
+        return None
+    p = Path(project_dir) / ".claude" / "memory"
+    return p
+
+
+def _is_cached(node_id: str, memory_dir: Path) -> bool:
+    """True if this memory is already copied into the project cache."""
+    return (memory_dir / f"{node_id}.md").exists()
+
+
+def _cache_memory(node: dict, raw_text: str, memory_dir: Path) -> None:
+    """Copy a user memory into the project cache."""
     try:
-        json.load(sys.stdin)  # consume stdin (required by hook protocol)
+        memory_dir.mkdir(parents=True, exist_ok=True)
+        (memory_dir / f"{node['id']}.md").write_text(raw_text, encoding="utf-8")
     except Exception:
         pass
+
+
+def main() -> None:
+    try:
+        payload = json.load(sys.stdin)
+    except Exception:
+        payload = {}
+
+    prompt = payload.get("prompt", "")
+    prompt_kw = _keywords(prompt)
+    project_mem_dir = _project_memory_dir()
 
     nodes = _load_memories()
     if not nodes:
         sys.exit(0)
 
-    # Always include high-priority; fill remaining budget by score
     high = [n for n in nodes if n["priority"] == "high"]
-    rest = sorted(
-        [n for n in nodes if n["priority"] != "high"],
-        key=_score,
-        reverse=True,
-    )
-    ordered = high + rest
+    rest = [n for n in nodes if n["priority"] != "high"]
 
-    selected: list[str] = []
+    # Gate on pure keyword overlap for non-high nodes
+    if prompt_kw:
+        relevant = [n for n in rest if _keyword_overlap(n, prompt_kw) >= MIN_KEYWORD_OVERLAP]
+        relevant.sort(key=lambda n: _relevance(n, prompt_kw), reverse=True)
+    else:
+        relevant = []
+
+    ordered = high + relevant
+    if not ordered:
+        sys.exit(0)
+
+    # Filter out memories already in project cache — no need to re-inject
+    if project_mem_dir:
+        to_inject = [n for n in ordered if not _is_cached(n["id"], project_mem_dir)]
+    else:
+        to_inject = ordered
+
+    if not to_inject:
+        sys.exit(0)
+
+    selected: list[tuple[dict, str]] = []
     used = 0
-    for node in ordered:
+    for node in to_inject:
         block = _format(node)
         if used + len(block) > TOKEN_BUDGET:
             break
-        selected.append(block)
+        selected.append((node, block))
         used += len(block) + 1
 
     if not selected:
         sys.exit(0)
 
-    header = "## Jig Memory (cross-project knowledge)\n"
-    print(header + "\n\n---\n\n".join(selected))
+    # Write project cache copies before injecting
+    if project_mem_dir:
+        raw_texts = {}
+        if MEMORY_DIR.exists():
+            for f in MEMORY_DIR.glob("*.md"):
+                raw_texts[f.stem] = f.read_text(encoding="utf-8")
+        for node, _ in selected:
+            raw = raw_texts.get(node["id"], _format(node))
+            _cache_memory(node, raw, project_mem_dir)
+
+    print("## Jig Memory (cross-project knowledge)\n")
+    print("\n\n---\n\n".join(block for _, block in selected))
     sys.exit(0)
 
 
