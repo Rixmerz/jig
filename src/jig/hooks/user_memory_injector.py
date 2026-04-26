@@ -30,7 +30,45 @@ from pathlib import Path
 
 TOKEN_BUDGET = 4000  # chars (~1000 tokens)
 MIN_KEYWORD_OVERLAP = 0.08  # minimum keyword-only overlap to include a node
+MIN_SEMANTIC_SCORE: float = 0.45  # cosine similarity threshold
 MEMORY_DIR = Path.home() / ".jig" / "memory"
+
+_embedder_instance: object | None = None
+_embedder_checked: bool = False
+
+
+def _init_embedder() -> bool:
+    """Lazily load jig.core.embeddings embedder. Returns True if available."""
+    global _embedder_instance, _embedder_checked
+    if _embedder_checked:
+        return _embedder_instance is not None
+    _embedder_checked = True
+    try:
+        from jig.core.embeddings import get_embedder  # type: ignore[import]
+        client = get_embedder()
+        if client.available:
+            _embedder_instance = client
+            return True
+    except Exception:
+        pass
+    return False
+
+
+def _cosine(a: list[float], b: list[float]) -> float:
+    """Pure-Python cosine similarity — no numpy required."""
+    dot = sum(x * y for x, y in zip(a, b))
+    norm_a = sum(x * x for x in a) ** 0.5
+    norm_b = sum(x * x for x in b) ** 0.5
+    if norm_a == 0.0 or norm_b == 0.0:
+        return 0.0
+    return dot / (norm_a * norm_b)
+
+
+def _build_memory_text(node: dict) -> str:
+    """Build searchable text for embedding: name + description + tags."""
+    tags = node.get("tags", [])
+    tags_str = " ".join(tags) if isinstance(tags, list) else str(tags)
+    return f"{node.get('name', '')} {node.get('description', '')} {tags_str}"
 
 _STOP_WORDS = frozenset({
     "a", "an", "the", "and", "or", "but", "in", "on", "at", "to", "for",
@@ -193,8 +231,32 @@ def main() -> None:
     high = [n for n in nodes if n["priority"] == "high"]
     rest = [n for n in nodes if n["priority"] != "high"]
 
-    # Gate on pure keyword overlap for non-high nodes
-    if prompt_kw:
+    # Gate on keyword overlap or semantic similarity for non-high nodes
+    use_semantic = os.environ.get("JIG_MEMORY_SEMANTIC", "") == "1"
+    if use_semantic and prompt and _init_embedder():
+        try:
+            prompt_vec: list[float] = _embedder_instance.embed_one(prompt)  # type: ignore[union-attr]
+            texts = [_build_memory_text(n) for n in rest]
+            vecs = list(_embedder_instance.embed_many(texts))  # type: ignore[union-attr]
+            memory_vecs = {rest[i]["id"]: vecs[i] for i in range(len(rest))}
+            relevant = [
+                n for n in rest
+                if _cosine(prompt_vec, memory_vecs.get(n["id"], [])) >= MIN_SEMANTIC_SCORE
+            ]
+            relevant.sort(
+                key=lambda n: _cosine(prompt_vec, memory_vecs.get(n["id"], [])) + (
+                    {"feedback": 0.15, "user": 0.10, "project": 0.05, "reference": 0.0}.get(n["type"], 0.0)
+                ),
+                reverse=True,
+            )
+        except Exception:
+            # Fallback to keyword path on any error
+            if prompt_kw:
+                relevant = [n for n in rest if _keyword_overlap(n, prompt_kw) >= MIN_KEYWORD_OVERLAP]
+                relevant.sort(key=lambda n: _relevance(n, prompt_kw), reverse=True)
+            else:
+                relevant = []
+    elif prompt_kw:
         relevant = [n for n in rest if _keyword_overlap(n, prompt_kw) >= MIN_KEYWORD_OVERLAP]
         relevant.sort(key=lambda n: _relevance(n, prompt_kw), reverse=True)
     else:

@@ -72,6 +72,7 @@ def run(args: argparse.Namespace) -> int:
 
     from jig.cli.init_cmd import _copy_assets
     _copy_assets(claude_dir)
+    _clean_stale_project_memory(target)
     _patch_settings(claude_dir)
 
     if args.agents:
@@ -86,8 +87,44 @@ def run(args: argparse.Namespace) -> int:
     return 0
 
 
+def _clean_stale_project_memory(project_dir: Path) -> None:
+    """Remove or refresh stale .claude/memory/ entries vs ~/.jig/memory/ source."""
+    import shutil
+
+    local_mem_dir = project_dir / ".claude" / "memory"
+    global_mem_dir = Path.home() / ".jig" / "memory"
+
+    if not local_mem_dir.is_dir():
+        return
+
+    cleaned = 0
+    refreshed = 0
+    for local_file in local_mem_dir.glob("*.md"):
+        global_file = global_mem_dir / local_file.name
+        if not global_file.exists():
+            try:
+                local_file.unlink()
+                cleaned += 1
+            except OSError:
+                pass
+        elif global_file.stat().st_mtime > local_file.stat().st_mtime:
+            try:
+                shutil.copy2(global_file, local_file)
+                refreshed += 1
+            except OSError:
+                pass
+
+    if cleaned or refreshed:
+        parts: list[str] = []
+        if cleaned:
+            parts.append(f"removed {cleaned} deleted")
+        if refreshed:
+            parts.append(f"refreshed {refreshed} updated")
+        print(f"[jig.resync] cleaned memory cache ({', '.join(parts)})")
+
+
 def _patch_settings(claude_dir: Path) -> None:
-    """Add missing UserPromptSubmit hook to existing settings.json without rewriting it."""
+    """Idempotently add missing hooks to an existing settings.json."""
     import json
     import sys
 
@@ -102,25 +139,60 @@ def _patch_settings(claude_dir: Path) -> None:
         return
 
     hooks = data.setdefault("hooks", {})
-    if "UserPromptSubmit" in hooks:
-        return  # already present, don't touch
+    changed = False
+    changed |= _ensure_user_prompt_submit_hook(hooks, sys.executable)
+    changed |= _ensure_session_bootstrap_hook(hooks, sys.executable)
+    changed |= _ensure_stop_hook(hooks, sys.executable)
 
-    hook_entry = [
+    if changed:
+        settings_path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+        print("[jig.resync] patched settings.json")
+
+
+def _ensure_user_prompt_submit_hook(hooks: dict, python_exe: str) -> bool:
+    """Add UserPromptSubmit hook if missing. Returns True if added."""
+    if "UserPromptSubmit" in hooks:
+        return False
+    hooks["UserPromptSubmit"] = [
         {
             "matcher": "*",
-            "hooks": [
-                {
-                    "type": "command",
-                    "command": f"{sys.executable} \"$CLAUDE_PROJECT_DIR/.claude/hooks/user_memory_injector.py\"",
-                    "timeout": 5,
-                }
-            ],
+            "hooks": [{"type": "command", "command": f"{python_exe} \"$CLAUDE_PROJECT_DIR/.claude/hooks/user_memory_injector.py\"", "timeout": 5}],
         }
     ]
-    # Insert UserPromptSubmit as the first key for readability
-    data["hooks"] = {"UserPromptSubmit": hook_entry, **hooks}
-    settings_path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
-    print("[jig.resync] patched settings.json: added UserPromptSubmit hook")
+    return True
+
+
+def _ensure_session_bootstrap_hook(hooks: dict, python_exe: str) -> bool:
+    """Add session_bootstrap.py to SessionStart if missing. Returns True if added."""
+    session_start = hooks.setdefault("SessionStart", [])
+    for entry in session_start:
+        for h in entry.get("hooks", []):
+            if "session_bootstrap.py" in h.get("command", ""):
+                return False
+    # Append to the first matcher block or create one
+    if session_start:
+        session_start[0].setdefault("hooks", []).append(
+            {"type": "command", "command": f"{python_exe} \"$CLAUDE_PROJECT_DIR/.claude/hooks/session_bootstrap.py\"", "timeout": 5}
+        )
+    else:
+        session_start.append({"matcher": "*", "hooks": [{"type": "command", "command": f"{python_exe} \"$CLAUDE_PROJECT_DIR/.claude/hooks/session_bootstrap.py\"", "timeout": 5}]})
+    return True
+
+
+def _ensure_stop_hook(hooks: dict, python_exe: str) -> bool:
+    """Add Stop hook if missing. Returns True if added."""
+    stop = hooks.get("Stop", [])
+    for entry in stop:
+        for h in entry.get("hooks", []):
+            if "session_knowledge_capture.py" in h.get("command", ""):
+                return False
+    hooks["Stop"] = [
+        {
+            "matcher": "*",
+            "hooks": [{"type": "command", "command": f"{python_exe} \"$CLAUDE_PROJECT_DIR/.claude/hooks/session_knowledge_capture.py\"", "timeout": 10}],
+        }
+    ]
+    return True
 
 
 def _resync_agents(target: Path, tech_stack: list[str]) -> None:

@@ -51,9 +51,12 @@ _EXPECTED_HOOKS: frozenset[str] = frozenset({
     "graph_enforcer.py",
     "lsp_status_check.py",
     "memory_injector.py",
+    "session_bootstrap.py",
+    "session_knowledge_capture.py",
     "smart_context.py",
     "snapshot_trigger.py",
     "style_guard.py",
+    "user_memory_injector.py",
     "workflow_enforcer.py",
     "workflow_post_traverse.py",
 })
@@ -317,6 +320,25 @@ def _drifted_hooks(hooks_dir: Path) -> list[str]:
     return sorted(drift)
 
 
+def _count_dcc_project_files(db_path: Path, project_dir: str) -> int:
+    """Return count of code_points rows whose file_path starts with project_dir.
+
+    Returns -1 if the query fails (caller should not emit a false alarm).
+    """
+    import sqlite3 as _sqlite3
+    try:
+        conn = _sqlite3.connect(str(db_path), timeout=2)
+        cur = conn.execute(
+            "SELECT COUNT(*) FROM code_points WHERE file_path LIKE ? ESCAPE '\\'",
+            (project_dir.rstrip("/") + "/%",),
+        )
+        count: int = cur.fetchone()[0]
+        conn.close()
+        return count
+    except Exception:
+        return -1
+
+
 def _check_dcc_injection(project_dir: Path) -> tuple[str, str, str] | None:
     """Warn when DCC has indexed data but dcc_injection is disabled.
 
@@ -340,6 +362,11 @@ def _check_dcc_injection(project_dir: Path) -> tuple[str, str, str] | None:
         if not mid_phase_enabled:
             details.append("mid_phase_dcc=false")
         return ("!", "DCC injection config", ", ".join(details) + " — smells won't auto-inject")
+    count = _count_dcc_project_files(db_path, str(project_dir))
+    if count == 0:
+        return ("!", "DCC injection config", "dcc.db has data but 0 files from this project — run cube_index_directory(path='src/')")
+    if count > 0:
+        return ("✓", "DCC injection config", f"indexed + injection enabled ({count} files)")
     return ("✓", "DCC injection config", "indexed + injection enabled")
 
 
