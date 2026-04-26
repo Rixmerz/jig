@@ -73,13 +73,21 @@ def test_config_path_uses_centralized_state_dir(isolated_xdg, fake_project):
 HOOK_PATH = Path(__file__).resolve().parents[1] / "hooks" / "graph_enforcer.py"
 
 
-def _run_hook(tool_name: str, project_dir: str, home: Path) -> dict:
+def _run_hook(
+    tool_name: str,
+    project_dir: str,
+    home: Path,
+    tool_input: dict | None = None,
+) -> dict:
     """Run the actual graph_enforcer.py hook as a subprocess with the
     given tool_name. Returns the parsed decision JSON. ``home`` controls
     where the hook reads its state (it uses ``Path.home()`` directly)."""
+    payload: dict = {"tool_name": tool_name}
+    if tool_input is not None:
+        payload["tool_input"] = tool_input
     result = subprocess.run(
         [sys.executable, str(HOOK_PATH)],
-        input=json.dumps({"tool_name": tool_name}),
+        input=json.dumps(payload),
         env={
             "CLAUDE_PROJECT_DIR": project_dir,
             "HOME": str(home),
@@ -129,7 +137,12 @@ def test_hook_allows_graph_enforcer_toggle_even_with_wildcard(
 ):
     _seed_blocking_workflow(fake_project, isolated_xdg)
 
-    decision = _run_hook("mcp__jig__graph_enforcer_toggle", fake_project, isolated_xdg)
+    decision = _run_hook(
+        "mcp__jig__execute_mcp_tool",
+        fake_project,
+        isolated_xdg,
+        tool_input={"mcp_name": "graph", "tool_name": "graph_enforcer_toggle", "arguments": {}},
+    )
     assert decision["decision"] == "approve", (
         "graph_enforcer_toggle MUST always pass — it's the in-band "
         "recovery path. If this fails, the user can be deadlocked."
@@ -141,7 +154,12 @@ def test_hook_allows_graph_reset_even_with_wildcard(
 ):
     _seed_blocking_workflow(fake_project, isolated_xdg)
 
-    decision = _run_hook("mcp__jig__graph_reset", fake_project, isolated_xdg)
+    decision = _run_hook(
+        "mcp__jig__execute_mcp_tool",
+        fake_project,
+        isolated_xdg,
+        tool_input={"mcp_name": "graph", "tool_name": "graph_reset", "arguments": {}},
+    )
     assert decision["decision"] == "approve"
 
 
@@ -150,7 +168,12 @@ def test_hook_allows_graph_status_even_with_wildcard(
 ):
     _seed_blocking_workflow(fake_project, isolated_xdg)
 
-    decision = _run_hook("mcp__jig__graph_status", fake_project, isolated_xdg)
+    decision = _run_hook(
+        "mcp__jig__execute_mcp_tool",
+        fake_project,
+        isolated_xdg,
+        tool_input={"mcp_name": "graph", "tool_name": "graph_status", "arguments": {}},
+    )
     assert decision["decision"] == "approve"
 
 

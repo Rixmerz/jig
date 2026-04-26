@@ -106,12 +106,18 @@ def get_state_path(project_dir):
 #
 # Keep this list short and explicit. Read-only inspection + the enforcer
 # toggle + graph reset. Nothing that mutates code or runs shell.
+# Graph tools accessible via execute_mcp_tool that must always be approved
+# (recovery + read-only inspection path). Bare names match tool_input.tool_name.
+GRAPH_INNER_ALLOWLIST = frozenset({
+    "graph_enforcer_toggle",
+    "graph_status",
+    "graph_reset",
+    "graph_list_available",
+    "graph_timeline",
+})
+
 ENFORCER_ALLOWLIST = frozenset({
-    "mcp__jig__graph_enforcer_toggle",
-    "mcp__jig__graph_status",
-    "mcp__jig__graph_reset",
-    "mcp__jig__graph_list_available",
-    "mcp__jig__graph_timeline",
+    "mcp__jig__execute_mcp_tool",  # inner tool checked separately below
     "mcp__jig__jig_guide",
     "mcp__jig__jig_version",
 })
@@ -130,8 +136,16 @@ def main():
     # This is the in-band recovery path — without it, a stuck workflow
     # has no way back without editing files from a separate terminal.
     if tool_name in ENFORCER_ALLOWLIST:
-        print(json.dumps({"decision": "approve"}))
-        return
+        # execute_mcp_tool: check if inner graph tool is in recovery allowlist
+        if tool_name == "mcp__jig__execute_mcp_tool":
+            inner = hook_input.get("tool_input", {}).get("tool_name", "")
+            if inner in GRAPH_INNER_ALLOWLIST:
+                print(json.dumps({"decision": "approve"}))
+                return
+            # Fall through — inner tool subject to normal blocking below
+        else:
+            print(json.dumps({"decision": "approve"}))
+            return
 
     project_dir = os.environ.get("CLAUDE_PROJECT_DIR", "")
     if not project_dir:
@@ -172,14 +186,20 @@ def main():
         blocked_map = parse_tools_blocked(graph_file.read_text())
         tools_blocked = blocked_map.get(current_node, [])
 
+        # For execute_mcp_tool, check the inner tool name against blocked list
+        effective = tool_name
+        if tool_name == "mcp__jig__execute_mcp_tool":
+            effective = hook_input.get("tool_input", {}).get("tool_name", tool_name)
+
         # 3. Check if tool is blocked ("*" = block everything)
-        if "*" in tools_blocked or tool_name in tools_blocked:
+        if "*" in tools_blocked or effective in tools_blocked:
             print(json.dumps({
                 "decision": "block",
                 "message": (
-                    f"[Graph Enforcer] Tool '{tool_name}' is blocked at node "
+                    f"[Graph Enforcer] Tool '{effective}' is blocked at node "
                     f"'{current_node}' (workflow: {active_graph}). "
-                    f"Advance the workflow with graph_traverse to use this tool. "
+                    f"Advance the workflow with execute_mcp_tool(\"graph\", "
+                    f"\"graph_traverse\", {{...}}) to use this tool. "
                     f"If the MCP server is unreachable and you cannot call "
                     f"graph_reset, run `jig graph reset --project "
                     f"{project_dir}` from a terminal to clear the state."
