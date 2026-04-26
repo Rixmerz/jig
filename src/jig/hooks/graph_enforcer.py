@@ -99,6 +99,24 @@ def get_state_path(project_dir):
     return Path(project_dir) / ".claude" / "workflow" / "graph_state.json"
 
 
+# Tools that must ALWAYS pass the enforcer, no matter what the active
+# graph YAML says. These are the recovery and inspection tools — if they
+# could be blocked, a misconfigured workflow would lock the user out
+# with no in-band way to disable the enforcer or reset state.
+#
+# Keep this list short and explicit. Read-only inspection + the enforcer
+# toggle + graph reset. Nothing that mutates code or runs shell.
+ENFORCER_ALLOWLIST = frozenset({
+    "mcp__jig__graph_enforcer_toggle",
+    "mcp__jig__graph_status",
+    "mcp__jig__graph_reset",
+    "mcp__jig__graph_list_available",
+    "mcp__jig__graph_timeline",
+    "mcp__jig__jig_guide",
+    "mcp__jig__jig_version",
+})
+
+
 def main():
     try:
         hook_input = json.load(sys.stdin)
@@ -107,6 +125,14 @@ def main():
         return
 
     tool_name = hook_input.get("tool_name", "")
+
+    # Hardcoded escape hatch: control + read-only graph tools always pass.
+    # This is the in-band recovery path — without it, a stuck workflow
+    # has no way back without editing files from a separate terminal.
+    if tool_name in ENFORCER_ALLOWLIST:
+        print(json.dumps({"decision": "approve"}))
+        return
+
     project_dir = os.environ.get("CLAUDE_PROJECT_DIR", "")
     if not project_dir:
         print(json.dumps({"decision": "approve"}))

@@ -38,8 +38,10 @@ def _register_tools() -> None:
         config as config_tools,
         deployment,
         experience,
+        graph_enforcer_control,
         guide,
         metadata,
+        next_task as next_task_tools,
         patterns,
         proxy,
         snapshot,
@@ -55,6 +57,8 @@ def _register_tools() -> None:
     trends.register_trend_tools(mcp)
     deployment.register_deployment_tools(mcp)
     config_tools.register_config_tools(mcp)
+    next_task_tools.register_next_task_tools(mcp)
+    graph_enforcer_control.register_graph_enforcer_control_tools(mcp)
 
     try:
         from jig.tools.graph import register_all as register_graph
