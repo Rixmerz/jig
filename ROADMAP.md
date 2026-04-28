@@ -5,34 +5,31 @@ This document tracks what lands next. Dates are targets, not commitments.
 
 ## 0.1.0 — stable alpha (next)
 
-- **Sweep bundled assets for agentcockpit refs.** `src/jig/assets/agents/*.md`,
-  `assets/commands/*.md`, `assets/skills/*`, `assets/rules/*.md` still
-  contain hardcoded `/var/home/rixmerz/agentcockpit` paths, `agentcockpit-build`
-  distrobox references, `.workflow-manager/state/...` paths, and
-  descriptions that mention agentcockpit as the host product. These get
-  copied into user projects by `jig init` / `deploy_project_agents`
-  and will confuse first-time users.
-
+- **Sweep bundled assets for agentcockpit refs (ongoing).** Prefer neutral
+  placeholders in `src/jig/assets/**` (no machine-specific absolute paths).
+  CHANGELOG and `docs/architecture.md` may still mention legacy paths for
+  migration context.
 
 Close the gaps between "all sprints landed" and "users can actually install it".
 
 - **PyPI publication.** `jig-mcp` name reserved, CI `release.yml` wired for
   trusted publishing (GitHub OIDC, no API tokens). Ship first Test PyPI
   dry-run, then promote to PyPI proper once the smoke from a fresh VM passes.
-- **Author `docs/`.** The plan called for `architecture.md`, `tools.md`,
-  `init.md`, `embeddings.md`, `proxy.md`; directory currently empty. README
-  links them, so 404 risk until written.
+- **`docs/` shipped.** `architecture.md`, `tools.md`, `init.md`,
+  `embeddings.md`, `proxy.md`, and `testing.md` live under `docs/`; keep them
+  in sync with README numbers when the tool surface changes.
 - **Fresh-VM E2E.** The acceptance criteria at the tail of
   `~/.claude/plans/si-jig-realiza-la-cozy-church.md` (steps 1–18) has not been
   run end-to-end on a clean VM. Blocks release.
-- **Model download UX.** First-run fastembed pull is ~1.3 GB and blocks
-  server startup. `jig doctor --prefetch` should be documented in the README
-  quickstart, not buried.
+- **Model download UX.** `jig doctor --prefetch` documents and performs a
+  blocking model load; README quickstart points to it. Server startup still
+  warms embeddings in a background thread (non-blocking).
 
 ## 0.2.0 — proxy hardening
 
-- **Reconnect backoff telemetry.** `proxy_pool.py` reconnects silently on
-  stale stdio; surface failures in `jig doctor` and `proxy_list`.
+- **Reconnect backoff telemetry (partial).** `McpConnection.last_error` is set
+  on common failures; `jig doctor` reports pooled proxy `last_error` values.
+  Remaining: reconnect attempt counters / backoff metrics in `proxy_list`.
 - **Per-proxy resource limits.** Subprocess memory cap + wall-clock timeout
   on `execute_mcp_tool`. Currently unbounded.
 - **Search quality.** A/B `bge-large` vs `bge-small` vs hybrid

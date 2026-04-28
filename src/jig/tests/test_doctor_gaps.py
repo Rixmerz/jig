@@ -7,24 +7,19 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
-import os
 import sys
-import tempfile
 from pathlib import Path
 from unittest import mock
 
-import pytest
-
 from jig.cli.doctor import (
+    _EXPECTED_HOOKS,
     _check_dcc_injection,
+    _check_proxy_last_errors,
     _drifted_hooks,
     _render_dry_run_diffs,
     run,
-    _EXPECTED_HOOKS,
 )
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -61,6 +56,7 @@ def _make_project(tmp_path: Path) -> Path:
 def _populate_hooks_from_wheel(hooks_dir: Path) -> None:
     """Copy actual bundled hooks into hooks_dir."""
     from importlib import resources
+
     import jig.hooks as hooks_pkg
 
     bundled = resources.files(hooks_pkg)
@@ -69,6 +65,44 @@ def _populate_hooks_from_wheel(hooks_dir: Path) -> None:
             dest = hooks_dir / entry.name
             dest.write_bytes(entry.read_bytes())
             dest.chmod(dest.stat().st_mode | 0o111)
+
+
+# ---------------------------------------------------------------------------
+# Proxy last_error surfacing
+# ---------------------------------------------------------------------------
+
+
+class TestProxyLastErrorsCheck:
+    def test_ok_when_no_errors(self) -> None:
+        from jig.engines.proxy_pool import ProxyStatus
+
+        async def _statuses() -> list[ProxyStatus]:
+            return [
+                ProxyStatus(name="p", connected=False, tool_count=0, last_error=None),
+            ]
+
+        with mock.patch("jig.engines.proxy_pool.proxy_statuses", new=_statuses):
+            status, _name, note = _check_proxy_last_errors()
+        assert status == "✓"
+        assert "no recorded errors" in note
+
+    def test_warn_when_last_error_set(self) -> None:
+        from jig.engines.proxy_pool import ProxyStatus
+
+        async def _statuses() -> list[ProxyStatus]:
+            return [
+                ProxyStatus(
+                    name="bad",
+                    connected=False,
+                    tool_count=0,
+                    last_error="init failed: boom",
+                ),
+            ]
+
+        with mock.patch("jig.engines.proxy_pool.proxy_statuses", new=_statuses):
+            status, _name, note = _check_proxy_last_errors()
+        assert status == "!"
+        assert "bad:" in note
 
 
 # ---------------------------------------------------------------------------
@@ -83,7 +117,7 @@ class TestDccInjectionCheck:
             mock_paths.data_dir.return_value = tmp_path
             result = _check_dcc_injection(tmp_path)
         assert result is not None
-        status, name, note = result
+        status, _name, note = result
         assert status == "!"
         assert "cube_index_project" in note
 
@@ -219,10 +253,6 @@ class TestDriftedHooks:
 
         ns = argparse.Namespace(project=str(proj), repair=True, dry_run=False)
         captured_plan: list = []
-
-        original_apply = __import__(
-            "jig.cli.doctor", fromlist=["_apply_repair"]
-        )._apply_repair
 
         with mock.patch("jig.cli.doctor._apply_repair") as mock_apply:
             with mock.patch("jig.cli.doctor.paths") as mock_paths:

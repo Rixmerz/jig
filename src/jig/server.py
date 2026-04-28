@@ -1,9 +1,9 @@
 """FastMCP server — wires engines + tools into a single stdio MCP endpoint."""
 from __future__ import annotations
 
-import asyncio
 import logging
 import sys
+import threading
 
 from fastmcp import FastMCP
 
@@ -35,19 +35,23 @@ def _register_tools() -> None:
 
     from jig.tools import (
         _tool_archive,
-        config as config_tools,
         deployment,
         experience,
         graph_enforcer_control,
         guide,
-        metadata,
         memory,
-        next_task as next_task_tools,
-        resync,
+        metadata,
         patterns,
         proxy,
+        resync,
         snapshot,
         trends,
+    )
+    from jig.tools import (
+        config as config_tools,
+    )
+    from jig.tools import (
+        next_task as next_task_tools,
     )
 
     proxy.register(mcp)
@@ -88,6 +92,7 @@ def _register_tools() -> None:
     # having to register an external DCC MCP with ``proxy_add``.
     try:
         from fastmcp import FastMCP
+
         from jig.engines.dcc.tools import register_all_tools as _dcc_register
 
         dcc_holder = FastMCP(name="_dcc_holder")
@@ -98,14 +103,18 @@ def _register_tools() -> None:
         log.warning("[jig.server] DCC internal proxy registration failed: %s", e)
 
 
-async def _warmup_embed_model() -> None:
-    """Touch fastembed in background so the first search isn't slow."""
+def _warmup_embed_model_sync() -> None:
+    """Load fastembed once so the first ``proxy_tools_search`` is faster.
+
+    Runs in a daemon thread — must not use ``asyncio`` (``mcp.run()`` owns
+    the process event loop).
+    """
     try:
         from jig.core.embeddings import get_embedder
 
         emb = get_embedder()
         if emb.available:
-            await asyncio.to_thread(emb.embed_one, "warmup")
+            emb.embed_one("warmup")
             log.info("[jig.server] embedding model warm")
     except Exception as e:
         log.debug("[jig.server] embed warmup skipped: %s", e)
@@ -121,12 +130,11 @@ def serve() -> None:
     print(f"[jig] starting MCP server v{__version__}", file=sys.stderr)
     _register_tools()
 
-    # Warmup in background — don't block startup
-    try:
-        loop = asyncio.new_event_loop()
-        loop.create_task(_warmup_embed_model())
-    except Exception:
-        pass
+    threading.Thread(
+        target=_warmup_embed_model_sync,
+        name="jig-embed-warmup",
+        daemon=True,
+    ).start()
 
     mcp.run()
 

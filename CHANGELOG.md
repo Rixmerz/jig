@@ -4,6 +4,33 @@ All notable changes to `jig` are documented in this file. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and versioning
 adheres to [SemVer](https://semver.org/).
 
+## [0.1.0a29] — unreleased
+
+### Fixed
+
+- MCP server embedding warmup: run model touch in a **daemon thread** with a
+  synchronous fastembed call instead of scheduling a coroutine on a **new
+  event loop that never ran** (warmup had no effect before `mcp.run()`).
+- `pyproject.toml` version drift vs `jig.__version__` (single source aligned
+  to **0.1.0a29**).
+- `python -m jig --version` smoke test: prepend ``src`` to ``PYTHONPATH`` in
+  the subprocess when running from a source checkout without editable install.
+
+### Added
+
+- **`jig doctor --prefetch`**: blocking download/load of the default embedding
+  model; documented in README “First-run embeddings”.
+- **`jig doctor`**: global check that surfaces **subprocess proxy** ``last_error``
+  strings from the pool when present (telemetry toward ROADMAP 0.2.0).
+
+### Changed
+
+- **`proxy_pool.McpConnection`**: record ``last_error`` on spawn failures,
+  dropped stdio, initialize failures, ``tools/list`` failures, and tool-call
+  timeouts; clear on successful ``tools/call`` receive.
+- **Bundled assets**: remove machine-specific MCP paths from
+  `mcp-developer.md` and `skills/debug/SKILL.md` (neutral wording).
+
 ## [0.1.0a28] — 2026-04-26
 
 ### Added

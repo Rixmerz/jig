@@ -1,9 +1,11 @@
 """`jig doctor` — diagnostics + repair.
 
 Global checks (always run):
+  - Optional ``--prefetch`` (blocking model load before the rest)
   - Python version
   - fastembed importable and model resolvable
   - ~/.config/jig/proxy.toml parseable
+  - Subprocess proxy ``last_error`` snapshot (from the pool, if any)
   - Embedding cache DB writable
   - XDG paths exist / creatable
   - git available (and whether cwd is a repo)
@@ -22,13 +24,17 @@ Repair (``--repair``):
   - Recopies missing hook files from the wheel.
 
 ``--dry-run`` shows the plan without touching anything.
+
+``--prefetch`` loads the fastembed model (blocking) so later
+``proxy_tools_search`` calls are fast; intended for post-install or CI images.
 """
 from __future__ import annotations
 
 import argparse
+import asyncio
+import contextlib
 import difflib
 import hashlib
-import json
 import os
 import re
 import shutil
@@ -39,7 +45,6 @@ from pathlib import Path
 
 from jig import __version__
 from jig.core import embeddings, paths
-
 
 # Hook files that every jig-scaffolded project is expected to have.
 # Keep in sync with ``cli.init_cmd._copy_assets``.
@@ -63,6 +68,11 @@ _EXPECTED_HOOKS: frozenset[str] = frozenset({
 
 
 def run(args: argparse.Namespace) -> int:
+    if getattr(args, "prefetch", False):
+        prefetch_rc = _run_embedding_prefetch()
+        if prefetch_rc != 0:
+            return prefetch_rc
+
     findings: list[tuple[str, str, str]] = []  # (status, name, note); status ∈ {✓, ✗, !}
 
     findings.append(_check_python())
@@ -70,6 +80,7 @@ def run(args: argparse.Namespace) -> int:
     findings.append(_check_paths())
     findings.append(_check_cache_writable())
     findings.append(_check_proxy_config())
+    findings.append(_check_proxy_last_errors())
     findings.append(_check_git())
 
     project = getattr(args, "project", None)
@@ -219,6 +230,46 @@ def _check_proxy_config() -> tuple[str, str, str]:
         "proxy.toml parseable",
         f"{len(configs)} proxies at {proxy_pool.proxy_config_path()}",
     )
+
+
+def _run_embedding_prefetch() -> int:
+    """Blocking load of the default embedding model (may download on first run)."""
+    print(
+        "Prefetching embedding model (first run may download up to ~1.3 GB)…",
+        file=sys.stderr,
+    )
+    emb = embeddings.get_embedder()
+    if not emb.available:
+        print("fastembed is not available — install jig with its dependencies.", file=sys.stderr)
+        return 1
+    vec = emb.embed_one("jig doctor --prefetch warmup")
+    if vec is None:
+        print("Embedding model failed to load — see logs above.", file=sys.stderr)
+        return 1
+    print(
+        f"Embedding model ready (dim={len(vec)}, model={embeddings.resolve_model()}).",
+        file=sys.stderr,
+    )
+    return 0
+
+
+def _check_proxy_last_errors() -> tuple[str, str, str]:
+    """Surface recent proxy subprocess errors (see ROADMAP 0.2 telemetry)."""
+    from jig.engines import proxy_pool
+
+    try:
+        statuses = asyncio.run(proxy_pool.proxy_statuses())
+    except Exception as e:
+        return ("!", "proxy subprocess errors", f"status query failed: {e}")
+    errs = [f"{s.name}: {s.last_error}" for s in statuses if s.last_error]
+    if not statuses:
+        return ("✓", "proxy subprocess errors", "no subprocess proxies configured")
+    if not errs:
+        return ("✓", "proxy subprocess errors", "no recorded errors on pooled connections")
+    note = "; ".join(errs[:4])
+    if len(errs) > 4:
+        note += f" … (+{len(errs) - 4} more)"
+    return ("!", "proxy subprocess errors", note)
 
 
 def _check_git() -> tuple[str, str, str]:
@@ -435,10 +486,8 @@ def _apply_repair(action: str, payload) -> None:
         hooks_dir, non_exec = payload
         for name in non_exec:
             p = hooks_dir / name
-            try:
+            with contextlib.suppress(OSError):
                 p.chmod(p.stat().st_mode | 0o111)
-            except OSError:
-                pass
         return
 
 
