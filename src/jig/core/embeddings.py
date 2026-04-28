@@ -22,7 +22,7 @@ import logging
 import os
 import threading
 from functools import lru_cache
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -53,7 +53,7 @@ class FastembedClient:
 
     def __init__(self, model_name: str | None = None) -> None:
         self.model_name = model_name or resolve_model()
-        self._model = None
+        self._model: Any = None
         self._lock = threading.Lock()
         self._load_error: Exception | None = None
 

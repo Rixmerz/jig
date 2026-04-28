@@ -1,5 +1,21 @@
 # Testing Guidelines
 
+## Pre-commit (local)
+
+```bash
+uv run pre-commit install
+uv run pre-commit run --all-files
+```
+
+- **Ruff** + **ruff format** are **manual** (same stage as mypy) so `git commit` is not blocked
+  on the repo’s existing Ruff backlog. Run:
+  `uv run pre-commit run ruff ruff-format --hook-stage manual --all-files`
+  or `ruff check` / `ruff format` like **CI** (`.github/workflows/test.yml`).
+- **mypy** (manual): `uv run pre-commit run mypy --hook-stage manual --all-files`  
+  types `src/jig/core` only. Full `uv run mypy` matches `pyproject.toml` (includes `engines/`).
+- **no-commit-to-branch** blocks commits on `main` / `master` (use a feature branch + PR).
+- Also: `check-json`, `check-case-conflict`, `debug-statements`, merge markers, 500kb file cap.
+
 Baseline (as of 0.1.0a21):
 
 - **150/150 pytest** — `uv run --extra dev pytest src/jig/tests/`

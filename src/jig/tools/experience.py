@@ -50,7 +50,6 @@ def register_experience_tools(mcp):
             session_id: Optional session ID
         """
         resolved_dir, sid = resolve_project_dir(project_dir, session_id)
-        project_name = Path(resolved_dir).name
 
         if scope == "global":
             source = get_experience_store()

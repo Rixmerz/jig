@@ -67,4 +67,5 @@ def register(mcp: "FastMCP") -> None:
         return {"topic": topic, "content": content}
 
 
-__all__ = ["jig_guide" , "list_topics", "load_topic", "register"]
+# `jig_guide` is the MCP tool name but is defined inside `register()` (not module-level).
+__all__ = ["list_topics", "load_topic", "register"]

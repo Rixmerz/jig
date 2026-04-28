@@ -34,6 +34,14 @@ adheres to [SemVer](https://semver.org/).
   `OUTPUT_CONTRACTS.md` (all phases, ROADMAP table, waivers); add
   `INTEGRATION_SMOKE.md` (MCP/CLI gate, not CORS), `ALIGNMENT_PROJECT_FLOW.md`,
   and `SETUP_AND_TOOLKIT.md`; update `PHASE_ROUTING.md`.
+- **pre-commit:** `pre-commit-hooks` v6; add `check-json`, `check-case-conflict`,
+  `debug-statements`, `no-commit-to-branch` (main/master); mypy mirror v1.15
+  with **manual** `mypy` on `src/jig/core`; **Ruff** + **ruff-format** on
+  **manual** stage so default commits are not blocked on existing Ruff debt
+  (see `docs/testing.md`). Fix `lsp_status_check.py` f-string for Python 3.10 +
+  `debug-statements` AST parse.
+- **Types / lint nits:** `session.py`, `embeddings.py`, `snapshots.py` (mypy);
+  `guide.py` `__all__`; remove unused `project_name` in `experience_query`.
 
 ## [0.1.0a28] — 2026-04-26
 
