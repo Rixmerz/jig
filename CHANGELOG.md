@@ -34,6 +34,8 @@ adheres to [SemVer](https://semver.org/).
   `OUTPUT_CONTRACTS.md` (all phases, ROADMAP table, waivers); add
   `INTEGRATION_SMOKE.md` (MCP/CLI gate, not CORS), `ALIGNMENT_PROJECT_FLOW.md`,
   and `SETUP_AND_TOOLKIT.md`; update `PHASE_ROUTING.md`.
+- **Handoff:** `docs/HANDOFF_0.1.0a29.md` (entrega, calidad, PR); ROADMAP status
+  line points to that doc and 0.1.0a29.
 - **pre-commit:** `pre-commit-hooks` v6; add `check-json`, `check-case-conflict`,
   `debug-statements`, `no-commit-to-branch` (main/master); mypy mirror v1.15
   with **manual** `mypy` on `src/jig/core`; **Ruff** + **ruff-format** on

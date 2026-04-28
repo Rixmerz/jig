@@ -1,6 +1,8 @@
 # Roadmap
 
-Status: `0.1.0a1` shipped 2026-04-19 (first alpha, no PyPI release yet).
+**Current line:** `0.1.0a29` (in development; see `CHANGELOG.md` and
+[`docs/HANDOFF_0.1.0a29.md`](docs/HANDOFF_0.1.0a29.md) for the latest handoff).
+First alpha tag on `main` was `0.1.0a1` (2026-04-19). PyPI not published yet.
 This document tracks what lands next. Dates are targets, not commitments.
 
 ## 0.1.0 — stable alpha (next)
