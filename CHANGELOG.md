@@ -30,6 +30,10 @@ adheres to [SemVer](https://semver.org/).
   timeouts; clear on successful ``tools/call`` receive.
 - **Bundled assets**: remove machine-specific MCP paths from
   `mcp-developer.md` and `skills/debug/SKILL.md` (neutral wording).
+- **Pipeline documentation** (`docs/pipeline/`): full `/proyecto` handoff in
+  `OUTPUT_CONTRACTS.md` (all phases, ROADMAP table, waivers); add
+  `INTEGRATION_SMOKE.md` (MCP/CLI gate, not CORS), `ALIGNMENT_PROJECT_FLOW.md`,
+  and `SETUP_AND_TOOLKIT.md`; update `PHASE_ROUTING.md`.
 
 ## [0.1.0a28] — 2026-04-26
 
