@@ -1,6 +1,6 @@
 ---
 name: task-with-jig
-description: Execute a simple, single-scope task using a jig workflow + a specialized subagent. Use for tasks that fit one phase-gated flow (bug fix, small feature, refactor of one area). Reads `next_task_get` for continuity context from the previous task. For multi-wave sprints use /sprint instead.
+description: Run a phase-enforced workflow for a medium, single-domain task with one specialized subagent. Use when the task warrants gated phases (refactor with regression risk, bugfix in load-bearing code, feature inside one domain that crosses understand → design → implement → verify). NOT for trivial 1-3 line edits and NOT for multi-wave parallel work. Reads `next_task_get` for continuity. For multi-domain or parallelizable work, use /sprint.
 disable-model-invocation: true
 argument-hint: "[task description]"
 ---
@@ -8,6 +8,16 @@ argument-hint: "[task description]"
 Execute this task using jig's phase-gated workflow + a specialized subagent: **$ARGUMENTS**
 
 You are the orchestrator. Do NOT implement code yourself. Pick the right workflow, delegate the work to a subagent, advance phases, then close out.
+
+## When this command is the wrong tool
+
+Stop and recommend a different path before doing anything else if any of these apply:
+
+- The task is **trivial** (≤5 minutes of edits, no structural risk, no test surface). The phase-enforcement ceremony costs more than the fix. Tell the user to just describe the task without `/task-with-jig`.
+- The task is **multi-domain** (backend + frontend, multiple parallelizable streams). Recommend `/sprint`.
+- The task is **exploratory** ("find out why X happens", no concrete change yet). Recommend running an `Explore` or `debugger` subagent without a workflow.
+
+`/task-with-jig` earns its overhead when phase enforcement provides real value: a refactor where you want a "design before implement" gate, a bugfix where you want "reproduce before fix", a feature where verification cannot be skipped.
 
 ## Step 0 — Continuity hand-off (always run first)
 
