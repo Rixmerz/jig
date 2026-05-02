@@ -115,6 +115,26 @@ def _warmup_embed_model_sync() -> None:
         log.debug("[jig.server] embed warmup skipped: %s", e)
 
 
+def _install_parent_death_signal() -> None:
+    """On Linux, ask the kernel to SIGTERM us if the parent (claude) dies.
+
+    Why: when the Claude Code session exits without cleanly closing stdio,
+    the FastMCP loop can stay alive holding ~2 GB of fastembed weights.
+    PR_SET_PDEATHSIG is a kernel-level guarantee — no polling needed.
+    """
+    if not sys.platform.startswith("linux"):
+        return
+    try:
+        import ctypes
+        import signal as _signal
+
+        PR_SET_PDEATHSIG = 1
+        libc = ctypes.CDLL("libc.so.6", use_errno=True)
+        libc.prctl(PR_SET_PDEATHSIG, _signal.SIGTERM, 0, 0, 0)
+    except Exception as e:
+        log.debug("[jig.server] PR_SET_PDEATHSIG not installed: %s", e)
+
+
 def serve() -> None:
     """Start the MCP server on stdio. Blocks until the client disconnects."""
     logging.basicConfig(
@@ -122,6 +142,7 @@ def serve() -> None:
         format="[%(levelname)s] %(name)s: %(message)s",
         stream=sys.stderr,
     )
+    _install_parent_death_signal()
     print(f"[jig] starting MCP server v{__version__}", file=sys.stderr)
     _register_tools()
 
