@@ -163,7 +163,7 @@ Los nombres de tools usan underscores: `flowtrace_detect`, `flowtrace_init`, `lo
 
 - FlowTrace es OPCIONAL. El debugger funciona sin ningun MCP conectado.
 - Para proyectos sin FlowTrace, el debugging se basa en: tests, Bash, Read/Grep.
-- El MCP server de FlowTrace esta en: `/home/rixmerz/my_projects/flowtrace-debugger/mcp-server/`
+- El MCP server de FlowTrace es opcional; si el usuario lo tiene, la ruta al servidor es local a su entorno (no asumir rutas absolutas de otra máquina).
 - FlowTrace soporta: Node.js, Java, Python, Go, Rust, .NET
 - Para lenguajes no soportados por FlowTrace: usa tests nativos y profilers
 - Las trazas FlowTrace se generan en `flowtrace.jsonl` en el directorio del proyecto

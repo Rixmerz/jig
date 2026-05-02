@@ -198,14 +198,10 @@ def _rough_tool_estimate(_spec: dict) -> int:
 BASE_RULES: frozenset[str] = frozenset({
     "autonomous-strategy.md",
     "commit-discipline.md",
-    "execution-philosophy.md",
     "jig-methodology.md",
     "qa.md",
     "quality-feedback.md",
     "security-awareness.md",
-    "sprint-execution.md",
-    "subagent-delegation.md",
-    "workflow-discipline.md",
 })
 
 

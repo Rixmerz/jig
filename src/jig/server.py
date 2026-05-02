@@ -1,9 +1,9 @@
 """FastMCP server — wires engines + tools into a single stdio MCP endpoint."""
 from __future__ import annotations
 
-import asyncio
 import logging
 import sys
+import threading
 
 from fastmcp import FastMCP
 
@@ -35,19 +35,23 @@ def _register_tools() -> None:
 
     from jig.tools import (
         _tool_archive,
-        config as config_tools,
         deployment,
         experience,
         graph_enforcer_control,
         guide,
-        metadata,
         memory,
-        next_task as next_task_tools,
-        resync,
+        metadata,
         patterns,
         proxy,
+        resync,
         snapshot,
         trends,
+    )
+    from jig.tools import (
+        config as config_tools,
+    )
+    from jig.tools import (
+        next_task as next_task_tools,
     )
 
     proxy.register(mcp)
@@ -82,30 +86,30 @@ def _register_tools() -> None:
     except Exception as e:  # pragma: no cover
         log.warning("[jig.server] tool archival failed: %s", e)
 
-    # Expose the vendored DeltaCodeCube as an internal proxy so its
-    # ~40 analysis tools are callable via ``execute_mcp_tool("dcc", …)``
-    # and discoverable via ``proxy_tools_search`` without the user
-    # having to register an external DCC MCP with ``proxy_add``.
-    try:
-        from fastmcp import FastMCP
-        from jig.engines.dcc.tools import register_all_tools as _dcc_register
-
-        dcc_holder = FastMCP(name="_dcc_holder")
-        _dcc_register(dcc_holder)
-        dcc_count = asyncio.run(_tool_archive.archive_external_mcp(dcc_holder, "dcc"))
-        log.info("[jig.server] DCC internal proxy: %d tools", dcc_count)
-    except Exception as e:  # pragma: no cover
-        log.warning("[jig.server] DCC internal proxy registration failed: %s", e)
+    # DeltaCodeCube has been extracted to the standalone ``delta-cube`` package.
+    # The vendored engines/dcc/ folder has been removed.  Users who want DCC
+    # analysis tools should install the package and register it as an MCP proxy:
+    #
+    #   uvx delta-cube          (runs the MCP server)
+    #   proxy_add("dcc", "uvx", ["delta-cube"])
+    #
+    # Once registered, all cube_* tools are discoverable via proxy_tools_search
+    # and callable via execute_mcp_tool("dcc", …) exactly as before.
+    log.debug("[jig.server] DCC internal proxy skipped — use standalone delta-cube package")
 
 
-async def _warmup_embed_model() -> None:
-    """Touch fastembed in background so the first search isn't slow."""
+def _warmup_embed_model_sync() -> None:
+    """Load fastembed once so the first ``proxy_tools_search`` is faster.
+
+    Runs in a daemon thread — must not use ``asyncio`` (``mcp.run()`` owns
+    the process event loop).
+    """
     try:
         from jig.core.embeddings import get_embedder
 
         emb = get_embedder()
         if emb.available:
-            await asyncio.to_thread(emb.embed_one, "warmup")
+            emb.embed_one("warmup")
             log.info("[jig.server] embedding model warm")
     except Exception as e:
         log.debug("[jig.server] embed warmup skipped: %s", e)
@@ -121,12 +125,11 @@ def serve() -> None:
     print(f"[jig] starting MCP server v{__version__}", file=sys.stderr)
     _register_tools()
 
-    # Warmup in background — don't block startup
-    try:
-        loop = asyncio.new_event_loop()
-        loop.create_task(_warmup_embed_model())
-    except Exception:
-        pass
+    threading.Thread(
+        target=_warmup_embed_model_sync,
+        name="jig-embed-warmup",
+        daemon=True,
+    ).start()
 
     mcp.run()
 

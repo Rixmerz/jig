@@ -43,6 +43,11 @@ jig init /path/to/project
 Zero system dependencies. No Docker, no Ollama, no Node, no Rust. Just
 Python 3.10+ and git.
 
+**First-run embeddings:** the default search model (fastembed / `BAAI/bge-large-en-v1.5`)
+may download on first use (~1.3 GB). After install, run
+`jig doctor --prefetch` once to pull and load the model before starting
+the MCP server, so the first `proxy_tools_search` is not a surprise wait.
+
 Once `jig-mcp` is published on PyPI, drop the `git+https://…` bit:
 `uv tool install jig-mcp`.
 
@@ -182,7 +187,7 @@ details; [`docs/tools.md`](docs/tools.md) for the full tool reference;
 
 ## Status
 
-**Alpha (0.1.0a28).** API surface is subject to change before `0.1.0`
+**Alpha (0.1.0a29).** API surface is subject to change before `0.1.0`
 stable. Next milestone is PyPI publish; see [`ROADMAP.md`](ROADMAP.md).
 
 ### CLI
@@ -192,6 +197,7 @@ jig init /path/to/project       # scaffold hooks, rules, settings.json
 jig resync /path/to/project     # update assets after jig upgrade
 jig update                      # upgrade jig-mcp + resync CWD
 jig doctor --project .          # diagnostics + DCC scope check
+jig doctor --prefetch           # download/load embedding model (blocking)
 jig memory-gc --stats           # user memory store stats
 ```
 

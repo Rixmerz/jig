@@ -10,8 +10,6 @@ from jig.engines.experience_memory import (
     generalize_path, extract_file_keywords, guess_domain,
     compute_relevance, GLOBAL_MEMORY_FILE, PROJECT_MEMORIES_DIR,
     derive_implementation_checklist, format_checklist_for_prompt,
-)
-from jig.engines.dcc_integration import (
     get_experience_store, get_project_experience_store,
 )
 
@@ -50,7 +48,6 @@ def register_experience_tools(mcp):
             session_id: Optional session ID
         """
         resolved_dir, sid = resolve_project_dir(project_dir, session_id)
-        project_name = Path(resolved_dir).name
 
         if scope == "global":
             source = get_experience_store()

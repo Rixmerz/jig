@@ -6,6 +6,7 @@ Subcommands:
     resync     — update hooks/rules/commands/workflows in an existing jig project (no .mcp.json touch)
     update     — upgrade jig-mcp via uv tool upgrade + resync scaffolded projects
     doctor     — diagnostics: embedding model, proxy reachability, cache integrity
+                 (use ``doctor --prefetch`` to download/load embed model first)
     graph      — out-of-band graph state management (reset/status without MCP)
     memory     — list or search user-level memories (~/.jig/memory/)
     memory-gc  — garbage collect stale user-level memory files (~/.jig/memory/)
@@ -22,7 +23,6 @@ Invocation:
 from __future__ import annotations
 
 import argparse
-import sys
 from collections.abc import Sequence
 
 from jig import __version__
@@ -92,6 +92,15 @@ def _build_parser() -> argparse.ArgumentParser:
         "--dry-run",
         action="store_true",
         help="With --repair, print the plan without touching anything",
+    )
+    doctor.add_argument(
+        "--prefetch",
+        action="store_true",
+        help=(
+            "Download/load the embedding model before other checks (blocks; "
+            "first run may fetch ~1.3 GB). Use after install to avoid slow "
+            "first MCP search."
+        ),
     )
     doctor.set_defaults(func=_cmd_doctor)
 

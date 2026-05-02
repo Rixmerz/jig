@@ -1,5 +1,5 @@
 """Tests for security-related functions:
-- _summarize_security in dcc_integration.py
+- _summarize_security in dcc_glue.py
 - _filter_actionable_smells in dcc_feedback.py (standalone version)
 """
 import sys
@@ -8,7 +8,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from jig.engines.dcc_integration import _summarize_security
+from jig.engines.dcc_glue import _summarize_security
 
 # In jig, hooks are importable as jig.hooks.*
 from jig.hooks import dcc_feedback as _dcc_feedback

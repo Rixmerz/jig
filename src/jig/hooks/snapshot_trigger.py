@@ -8,8 +8,8 @@ since the previous snapshot) and injects it back into Claude's context
 via PostToolUse ``additionalContext``. A future version will also
 consult DCC for smell/tension deltas on the changed set.
 
-Protocol
-========
+Protocol:
+
 - stdin:  ``{"tool_name": ..., "tool_input": {...}, ...}``
 - stdout: JSON hook response:
     ``{"hookSpecificOutput": {"hookEventName": "PostToolUse",
@@ -107,7 +107,7 @@ def _smell_block(files: list[str]) -> str | None:
     if not files:
         return None
     try:
-        from jig.engines.dcc_integration import smells_for_files
+        from jig.engines.dcc_glue import smells_for_files
     except Exception:
         return None
     try:

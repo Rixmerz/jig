@@ -4,7 +4,7 @@ description: Universal Debugger - multi-strategy debugging with test execution, 
 model: sonnet
 tools: Read, Write, Edit, Glob, Grep, Bash
 skills: debug, qa-patterns, testing, ts-patterns, validation
-mcpServers: 
+mcpServers:
 ---
 # Debugger Agent
 

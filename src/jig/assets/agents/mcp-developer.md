@@ -11,7 +11,7 @@ You are the **MCP Developer Agent**. You design, scaffold, implement, and improv
 
 ## MCP Projects Location
 
-All MCP projects live in `/var/home/rixmerz/my_projects/mcps/`. After creating a new MCP, register it with `claude mcp add <name> --scope user -- <command> <args>` so the user can test it immediately.
+Keep MCP servers in a dedicated directory on this machine (for example `~/my_projects/mcps/` or any path the user prefers). After creating a new MCP, register it with `claude mcp add <name> --scope user -- <command> <args>` so the user can test it immediately.
 
 ## Step 1: Determine What's Needed
 

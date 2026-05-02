@@ -19,6 +19,7 @@ import os
 import sys
 import time
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any
 
 from jig.core import paths
@@ -54,7 +55,7 @@ class ProxyConfig:
 # Config I/O
 # ---------------------------------------------------------------------------
 
-def proxy_config_path() -> "paths.Path":
+def proxy_config_path() -> Path:
     return paths.ensure(paths.config_dir()) / "proxy.toml"
 
 
@@ -178,6 +179,10 @@ class McpConnection:
         except FileNotFoundError as e:
             self.last_error = f"command not found: {self.command}"
             raise RuntimeError(self.last_error) from e
+        except Exception as e:
+            self.last_error = f"spawn failed: {e}"
+            raise
+        self.last_error = None
         self._initialized = False
         self._last_used = time.monotonic()
         self._start_idle_watcher()
@@ -234,6 +239,7 @@ class McpConnection:
                 self.process.stdout.readline(), timeout=timeout
             )
             if not line:
+                self.last_error = "stdio closed (peer hung up or process died)"
                 raise RuntimeError("Connection closed")
             decoded = line.decode("utf-8", errors="replace").strip()
             if not decoded:
@@ -264,36 +270,44 @@ class McpConnection:
                 init_response = msg
                 break
         if init_response is None:
+            self.last_error = "no initialize response from MCP subprocess"
             raise RuntimeError("no initialize response")
         if "error" in init_response:
-            raise RuntimeError(f"initialize failed: {init_response['error']}")
+            err = f"initialize failed: {init_response['error']}"
+            self.last_error = err
+            raise RuntimeError(err)
         await self._send({"jsonrpc": "2.0", "method": "notifications/initialized"})
         await asyncio.sleep(0.1)
         self._initialized = True
+        self.last_error = None
 
     async def list_tools(self) -> list[dict[str, Any]]:
         """Query tools/list. Returns empty list on failure."""
-        async with self._lock:
-            if not self.is_alive():
-                await self.start()
-            if not self._initialized:
-                await self._initialize()
-            self.touch()
-            self._init_request_id += 1
-            rid = self._init_request_id
-            await self._send({
-                "jsonrpc": "2.0",
-                "id": rid,
-                "method": "tools/list",
-                "params": {},
-            })
-            for _ in range(20):
-                msg = await self._recv(timeout=15.0)
-                if msg.get("id") == rid:
-                    result = msg.get("result", {})
-                    if isinstance(result, dict):
-                        return list(result.get("tools", []))
-                    return []
+        try:
+            async with self._lock:
+                if not self.is_alive():
+                    await self.start()
+                if not self._initialized:
+                    await self._initialize()
+                self.touch()
+                self._init_request_id += 1
+                rid = self._init_request_id
+                await self._send({
+                    "jsonrpc": "2.0",
+                    "id": rid,
+                    "method": "tools/list",
+                    "params": {},
+                })
+                for _ in range(20):
+                    msg = await self._recv(timeout=15.0)
+                    if msg.get("id") == rid:
+                        result = msg.get("result", {})
+                        if isinstance(result, dict):
+                            return list(result.get("tools", []))
+                        return []
+        except Exception as e:
+            self.last_error = f"tools/list failed: {e}"
+            log.warning("[jig.proxy] %s list_tools: %s", self.name, e)
         return []
 
     async def call_tool(
@@ -309,6 +323,7 @@ class McpConnection:
                 try:
                     await self._initialize()
                 except Exception as e:
+                    self.last_error = f"init failed: {e}"
                     return {"error": {"code": -1, "message": f"init failed: {e}"}}
             self.touch()
             timeout = 360.0 if tool_name in _SLOW_TOOLS else 120.0
@@ -319,8 +334,11 @@ class McpConnection:
                     "method": "tools/call",
                     "params": {"name": tool_name, "arguments": arguments},
                 })
-                return await self._recv(timeout=timeout)
+                out = await self._recv(timeout=timeout)
+                self.last_error = None
+                return out
             except asyncio.TimeoutError:
+                self.last_error = f"timeout after {int(timeout)}s on {tool_name}"
                 return {
                     "error": {
                         "code": -1,
@@ -328,6 +346,7 @@ class McpConnection:
                     },
                 }
             except RuntimeError as e:
+                self.last_error = str(e)
                 return {"error": {"code": -1, "message": str(e)}}
 
 
@@ -476,7 +495,7 @@ async def proxy_reconnect(name: str) -> bool:
         print(f"[jig.proxy] reconnect {name}: stop failed: {e}", file=sys.stderr)
     try:
         await conn.start()
-        await conn._initialize()  # noqa: SLF001 — intentional
+        await conn._initialize()
     except Exception as e:
         print(f"[jig.proxy] reconnect {name}: restart failed: {e}", file=sys.stderr)
         return False
@@ -518,7 +537,7 @@ async def proxy_statuses() -> list[ProxyStatus]:
             connected=connected,
             tool_count=tool_count,
             last_error=(conn.last_error if conn else None),
-            last_used=(conn._last_used if conn else 0.0),  # noqa: SLF001
+            last_used=(conn._last_used if conn else 0.0),
         ))
     return out
 

@@ -15,7 +15,7 @@ from jig.engines.graph_state import (
     load_graph_state, initialize_graph_state,
     get_graph_file, save_graph_state,
 )
-from jig.engines.dcc_integration import (
+from jig.engines.dcc_glue import (
     _is_dcc_available, _execute_dcc_tool, _extract_tensions,
     _resolve_dcc_config, _run_dcc_analysis,
 )

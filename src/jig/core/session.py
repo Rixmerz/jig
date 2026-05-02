@@ -5,14 +5,14 @@ Handles project directory resolution and session storage.
 
 import uuid
 from datetime import datetime
-
+from typing import Any
 
 # Global session storage - persists within MCP server process
 # Key: session_id, Value: {"project_dir": str, "created_at": str}
-_session_store: dict[str, dict] = {}
+_session_store: dict[str, dict[str, Any]] = {}
 
 # Default session for single-project use (most common case)
-_default_session: dict = {"project_dir": None}
+_default_session: dict[str, str | None] = {"project_dir": None}
 
 
 def get_or_create_session(session_id: str | None = None) -> str:
@@ -30,7 +30,7 @@ def get_session_project_dir(session_id: str | None) -> str | None:
     return _default_session.get("project_dir")
 
 
-def set_session_project_dir(session_id: str | None, project_dir: str):
+def set_session_project_dir(session_id: str | None, project_dir: str) -> None:
     """Store project_dir for a specific session or default."""
     if session_id:
         if session_id not in _session_store:

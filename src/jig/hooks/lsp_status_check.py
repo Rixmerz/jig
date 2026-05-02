@@ -91,7 +91,8 @@ def main():
 
     parts = []
     if active:
-        parts.append(f"[LSP] Active: {', '.join(f'{l} \u2713' for l in active)}")
+        tick = "\u2713"
+        parts.append(f"[LSP] Active: {', '.join(f'{lang} {tick}' for lang in active)}")
     if missing:
         parts.append(f"[LSP] Missing: {', '.join(missing)} (run: claude-lsp-setup .)")
 

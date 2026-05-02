@@ -1,29 +1,52 @@
+# See https://pre-commit.com
+# Run: uv run pre-commit install  &&  uv run pre-commit run --all-files
+#
+# Do not pin `default_language_version` here: contributors may only have
+# one Python (e.g. 3.12). CI and pyproject enforce >=3.10; hooks use that runtime.
+
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v5.0.0
+    rev: v6.0.0
     hooks:
       - id: trailing-whitespace
       - id: end-of-file-fixer
       - id: check-yaml
       - id: check-toml
+      - id: check-json
       - id: check-added-large-files
-        args: [--maxkb=500]
+        args: [ --maxkb=500 ]
       - id: check-merge-conflict
+      - id: check-case-conflict
       - id: mixed-line-ending
-        args: [--fix=lf]
+        args: [ --fix=lf ]
+      - id: debug-statements
+      # Discourage direct commits on protected integration branches (use a feature branch + PR)
+      - id: no-commit-to-branch
+        args: [ --branch, main, --branch, master ]
 
+  # Ruff: manual so `git commit` is not blocked on hundreds of pre-existing findings.
+  # Run: `uv run pre-commit run ruff ruff-format --hook-stage manual --all-files`
+  # (or `ruff check` / `ruff format` like CI). Bump rev when the repo is clean on latest Ruff.
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.8.4
     hooks:
       - id: ruff
-        args: [--fix]
+        args: [ --fix ]
+        stages: [ manual ]
       - id: ruff-format
+        stages: [ manual ]
 
+  # Optional: `pre-commit run mypy --hook-stage manual --all-files`
+  # Scope: `src/jig/core` only (passes); engines/DCC is still being typed — see CI `mypy`.
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.13.0
+    rev: v1.15.0
     hooks:
       - id: mypy
-        files: ^src/jig/(core|engines)/
+        name: mypy (opt-in, src/jig/core)
+        stages: [manual]
+        pass_filenames: false
+        args: [ src/jig/core ]
         additional_dependencies:
+          - numpy>=1.24.0
           - pydantic>=2.0.0
           - types-PyYAML

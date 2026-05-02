@@ -11,6 +11,7 @@ Snapshot record format (append-only JSONL at .jig/snapshots.jsonl):
 """
 from __future__ import annotations
 
+import contextlib
 import json
 import logging
 import os
@@ -153,10 +154,8 @@ def create(project: Path, *, label: str = "", phase: str = "") -> Snapshot | Non
         _append_journal(project, snap)
         return snap
     finally:
-        try:
+        with contextlib.suppress(OSError):
             tmp_index.unlink(missing_ok=True)
-        except OSError:
-            pass
 
 
 def _resolve_head(project: Path) -> str | None:
@@ -240,10 +239,8 @@ def prune(project: Path, keep: int = 100) -> int:
         return 0
     to_delete = sorted(snaps, key=lambda s: s.created_at)[: len(snaps) - keep]
     for snap in to_delete:
-        try:
+        with contextlib.suppress(RuntimeError):
             _git(project, "update-ref", "-d", snap.ref)
-        except RuntimeError:
-            pass
     # Rewrite journal keeping only survivors
     survivors = sorted(snaps, key=lambda s: s.created_at)[-keep:]
     path = _journal_path(project)
