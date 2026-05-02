@@ -16,7 +16,7 @@
 |--------|------------------------|-------------------|
 | Scaffold | `setup.sh`, Bitbucket templates, `generate-*` | `uv tool install` / `jig init`; no Cocha generators. |
 | Integration smoke | CORS, BFF+SPA | See `INTEGRATION_SMOKE.md` (wheel, stdio MCP, `doctor`). |
-| Rules / skills in repo | May copy `.cursor/` for the app | `jig` ships **bundled assets** for **Claude Code** under `src/jig/assets/`; Cursor-only users rely on user-level rules unless we add an opt-in scaffold. |
+| Rules / skills in repo | May copy `.cursor/` for the app | `jig` ships **bundled assets** for **Claude Code** under `src/jig/assets/`; **Cursor mirror:** `jig emit-cursor`, `jig init --cursor`, or `jig resync --cursor` (see [`docs/cursor-assets.md`](../cursor-assets.md)). |
 
 ## When both are used
 

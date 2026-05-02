@@ -16,6 +16,38 @@ def _bundled_assets_dir() -> Path:
     return Path(jig.__file__).parent / "assets"
 
 
+def bundled_full_catalog() -> dict[str, list[str]]:
+    """All agent stems, skill directory names, and rule filenames from the hub.
+
+    Uses the same *_source() resolution as deploy tools (user hub overrides when
+    present). Used by Cursor emit and similar full-tree mirrors.
+    """
+    agents_dir = _agents_source()
+    skills_dir = _skills_source()
+    rules_dir = _rules_source()
+    agents = sorted(p.stem for p in agents_dir.glob("*.md")) if agents_dir.is_dir() else []
+    skills = sorted(p.name for p in skills_dir.iterdir() if p.is_dir()) if skills_dir.is_dir() else []
+    rules = sorted(p.name for p in rules_dir.glob("*.md")) if rules_dir.is_dir() else []
+    return {"agents": agents, "skills": skills, "rules": rules}
+
+
+def deploy_sets_for_stack(
+    tech_stack: list[str],
+    *,
+    extra_agents: list[str] | None = None,
+    extra_skills: list[str] | None = None,
+    include_core: bool = True,
+) -> tuple[list[str], list[str], list[str]]:
+    """Resolve agents, skills, and stack rules the same way as deploy_project_agents."""
+    if include_core:
+        agents = _resolve_agents_for_stack(tech_stack, extra_agents)
+    else:
+        agents = sorted(set(extra_agents or []))
+    skills = _resolve_skills_for_stack(tech_stack, extra_skills)
+    rules = _resolve_rules_for_stack(tech_stack)
+    return agents, skills, rules
+
+
 def _agents_source() -> Path:
     """Where list_available should read agents from.
 
@@ -241,6 +273,7 @@ def register_deployment_tools(mcp):
         source: str | None = None,
         dry_run: bool = False,
         no_warmup: bool = False,
+        cursor: bool = False,
     ) -> dict:
         """Phase 0: scaffold a project with jig's base layer.
 
@@ -263,6 +296,7 @@ def register_deployment_tools(mcp):
                 ``uvx jig-mcp`` (PyPI).
             dry_run: If True, print the plan and return without writing.
             no_warmup: Skip embedding warmup (first search will be slow).
+            cursor: When True, also emit the full Cursor mirror (same as ``jig init --cursor``).
 
         Returns:
             {success, exit_code, project_path, phase, next_step}
@@ -275,6 +309,7 @@ def register_deployment_tools(mcp):
             source=source,
             dry_run=dry_run,
             no_warmup=no_warmup,
+            cursor=cursor,
         )
         exit_code = _run_init(ns)
         return {

@@ -6,6 +6,16 @@ adheres to [SemVer](https://semver.org/).
 
 ## [0.1.0a29] — unreleased
 
+### Added
+
+- **`jig emit-cursor`**: mirror the full bundled catalog (or `--tech-stack` subset)
+  into **`.cursor/`** — `hooks.json` + hook scripts via `jig_cursor_hook_runner`
+  (maps `decision` / `hookSpecificOutput` toward Cursor JSON), **rules** as
+  `.mdc`, **skills**, **agents**, **commands**, workflow YAML under
+  `.cursor/jig/workflows/`, plus `.cursor/README.jig-cursor.md`.
+- **`jig init --cursor`** and **`jig resync --cursor`** to refresh the Cursor tree
+  alongside `.claude/`.
+
 ### Fixed
 
 - MCP server embedding warmup: run model touch in a **daemon thread** with a

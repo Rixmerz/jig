@@ -36,6 +36,14 @@ def add_parser(sub: argparse._SubParsersAction) -> None:
         action="store_true",
         help="Show what would be updated without writing anything",
     )
+    p.add_argument(
+        "--cursor",
+        action="store_true",
+        help=(
+            "Also refresh .cursor/ (hooks.json, rules as .mdc, commands, skills, agents). "
+            "With --agents TECH..., mirror the same stack filter; without --agents, emit the full catalog."
+        ),
+    )
     p.set_defaults(func=run)
 
 
@@ -65,6 +73,8 @@ def run(args: argparse.Namespace) -> int:
     print("    • .mcp.json     ← NOT touched (project-local)")
     if args.agents:
         print(f"    • agents/skills ← deploy_project_agents({args.agents})")
+    if getattr(args, "cursor", False):
+        print("    • .cursor/       ← jig emit-cursor (full catalog or --agents filter)")
     print()
 
     if args.dry_run:
@@ -77,6 +87,21 @@ def run(args: argparse.Namespace) -> int:
 
     if args.agents:
         _resync_agents(target, args.agents)
+
+    if getattr(args, "cursor", False):
+        from jig.cli.cursor_emit import emit_cursor_bundle
+
+        ts = list(args.agents) if args.agents else None
+        cur = emit_cursor_bundle(
+            target,
+            py_exe=sys.executable,
+            tech_stack=ts,
+            dry_run=False,
+        )
+        if not cur.get("success"):
+            print(f"[jig.resync] emit-cursor failed: {cur.get('error')}", file=sys.stderr)
+            return 2
+        print(f"[jig.resync] refreshed Cursor bundle → {target / '.cursor'}")
 
     print()
     print(" ─── jig resync complete ─── ")

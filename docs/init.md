@@ -4,7 +4,7 @@ Scaffolds a project for jig. One command turns an arbitrary directory
 into a token-economy-aware Claude Code project.
 
 ```
-jig init <path> [--source <spec>] [--dry-run] [--no-warmup]
+jig init <path> [--source <spec>] [--dry-run] [--no-warmup] [--cursor]
 ```
 
 ## What it does
@@ -102,6 +102,13 @@ Skips the embedding warmup step. `proxy_tools_search` will be slow on
 the first call (model load + embedding) but init finishes in seconds
 instead of minutes. Useful for air-gapped environments or when the
 embed model is already cached.
+
+## `--cursor`
+
+After scaffolding `.claude/`, also writes a **full** Cursor-oriented mirror
+under `.cursor/` (rules as `.mdc`, `hooks.json`, hook scripts, skills, agents,
+commands, workflow YAML). Same layout as `jig emit-cursor <path>` with no
+`--tech-stack` filter. See [`cursor-assets.md`](cursor-assets.md).
 
 ## Idempotence
 
