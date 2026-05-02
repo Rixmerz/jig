@@ -3,6 +3,7 @@
 Subcommands:
     serve      — start the MCP server on stdio (default when invoked with no args)
     init       — scaffold a project: migrate .mcp.json, copy hooks/rules/skills, warm cache
+    emit-cursor — mirror bundled assets into .cursor/ (rules, skills, agents, hooks, commands)
     resync     — update hooks/rules/commands/workflows in an existing jig project (no .mcp.json touch)
     update     — upgrade jig-mcp via uv tool upgrade + resync scaffolded projects
     doctor     — diagnostics: embedding model, proxy reachability, cache integrity
@@ -72,6 +73,11 @@ def _build_parser() -> argparse.ArgumentParser:
             "set via JIG_SOURCE env var."
         ),
     )
+    init.add_argument(
+        "--cursor",
+        action="store_true",
+        help="After scaffolding .claude/, mirror the full asset bundle into .cursor/",
+    )
     init.set_defaults(func=_cmd_init)
 
     doctor = sub.add_parser(
@@ -115,6 +121,9 @@ def _build_parser() -> argparse.ArgumentParser:
 
     from jig.cli import resync_cmd
     resync_cmd.add_parser(sub)
+
+    from jig.cli import cursor_emit
+    cursor_emit.add_parser(sub)
 
     from jig.cli import update_cmd
     update_cmd.add_parser(sub)

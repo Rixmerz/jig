@@ -194,7 +194,10 @@ stable. Next milestone is PyPI publish; see [`ROADMAP.md`](ROADMAP.md).
 
 ```bash
 jig init /path/to/project       # scaffold hooks, rules, settings.json
+jig init /path/to/project --cursor   # also mirror full bundle → .cursor/
+jig emit-cursor /path/to/project     # Cursor-only refresh (see docs/cursor-assets.md)
 jig resync /path/to/project     # update assets after jig upgrade
+jig resync /path/to/project --cursor # refresh .cursor/ mirror too
 jig update                      # upgrade jig-mcp + resync CWD
 jig doctor --project .          # diagnostics + DCC scope check
 jig doctor --prefetch           # download/load embedding model (blocking)

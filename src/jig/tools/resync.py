@@ -9,6 +9,7 @@ def register_resync_tools(mcp) -> None:
         project_path: str,
         tech_stack: list[str] | None = None,
         dry_run: bool = False,
+        cursor: bool = False,
     ) -> dict:
         # destructiveHint: True (overwrites .claude/ assets)
         """Update hooks, rules, commands and workflows in an existing jig-scaffolded project.
@@ -27,6 +28,7 @@ def register_resync_tools(mcp) -> None:
             tech_stack: If provided, also re-deploy agents and skills for these technologies
                         (e.g. ["python", "fastmcp"]). Equivalent to running /setup-agents after resync.
             dry_run: If True, return a plan without writing anything.
+            cursor: When True, also refresh ``.cursor/`` (full catalog if tech_stack omitted).
 
         Returns:
             updated: list of asset categories refreshed
@@ -54,6 +56,8 @@ def register_resync_tools(mcp) -> None:
         }
         if tech_stack:
             plan["updates"].append(f"agents/ + skills/ ({', '.join(tech_stack)})")
+        if cursor:
+            plan["updates"].append(".cursor/ (jig emit-cursor)")
 
         if dry_run:
             return {"dry_run": True, **plan}
@@ -65,10 +69,30 @@ def register_resync_tools(mcp) -> None:
         if tech_stack:
             agents_deployed = _deploy_agents(target, tech_stack)
 
+        cursor_summary = None
+        if cursor:
+            import sys
+
+            from jig.cli.cursor_emit import emit_cursor_bundle
+
+            cur = emit_cursor_bundle(
+                target,
+                py_exe=sys.executable,
+                tech_stack=list(tech_stack) if tech_stack else None,
+                dry_run=False,
+            )
+            cursor_summary = {
+                "success": cur.get("success"),
+                "agents": len(cur.get("agents_written") or []),
+                "skills": len(cur.get("skills_copied") or []),
+                "rules": len(cur.get("rules_written") or []),
+            }
+
         return {
             "updated": plan["updates"],
             "skipped": plan["skipped"],
             "agents_deployed": agents_deployed,
+            "cursor": cursor_summary,
             "message": (
                 f"Resync complete for {target.name}. "
                 "Reconnect jig in Claude Code via /mcp to pick up the changes."

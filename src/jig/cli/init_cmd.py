@@ -103,7 +103,13 @@ def run(args: argparse.Namespace) -> int:
     local_mcps, remote_mcps = _split_mcp_json(mcp_json_path)
     before_count = sum(_rough_tool_estimate(m) for m in (*local_mcps.values(), *remote_mcps.values()))
 
-    _print_plan(target, local_mcps, remote_mcps, dry_run=args.dry_run)
+    _print_plan(
+        target,
+        local_mcps,
+        remote_mcps,
+        dry_run=args.dry_run,
+        emit_cursor=getattr(args, "cursor", False),
+    )
     if args.dry_run:
         return 0
 
@@ -143,6 +149,26 @@ def run(args: argparse.Namespace) -> int:
     # 4. Copy assets to <project>/.claude/
     claude_dir = target / ".claude"
     _copy_assets(claude_dir)
+
+    if getattr(args, "cursor", False):
+        from jig.cli.cursor_emit import emit_cursor_bundle
+
+        cur = emit_cursor_bundle(
+            target,
+            py_exe=sys.executable,
+            tech_stack=None,
+            dry_run=False,
+        )
+        if not cur.get("success"):
+            print(
+                f"[jig.init] emit-cursor failed: {cur.get('error', 'unknown')}",
+                file=sys.stderr,
+            )
+            return 2
+        print(
+            f"[jig.init] also wrote Cursor bundle → {target / '.cursor'} "
+            f"(agents/skills/rules/hooks/commands; see .cursor/README.jig-cursor.md)"
+        )
 
     # 5. Warm up embeddings
     embedded = 0
@@ -231,6 +257,8 @@ def _copy_assets(claude_dir: Path) -> None:
         if entry.name.startswith("_") or not entry.name.endswith(".py"):
             if entry.name != "_common.py":
                 continue
+        if entry.name == "jig_cursor_hook_runner.py":
+            continue  # Cursor-only shim; emitted via ``jig emit-cursor``
         if entry.is_file():
             dest_path = claude_dir / "hooks" / entry.name
             dest_path.write_bytes(entry.read_bytes())
@@ -296,6 +324,7 @@ def _print_plan(
     remote: dict[str, dict],
     *,
     dry_run: bool,
+    emit_cursor: bool = False,
 ) -> None:
     header = "[DRY RUN] " if dry_run else ""
     print(f"{header}jig init {target}")
@@ -315,6 +344,8 @@ def _print_plan(
     print("    2. Write ~/.config/jig/proxy.toml with local MCP definitions")
     print("    3. Rewrite .mcp.json with only jig + remote MCPs")
     print("    4. Copy hooks, rules, commands, workflows → .claude/")
+    if emit_cursor:
+        print("    4b. Mirror full bundle → .cursor/ (rules as .mdc, hooks.json, …)")
     print("    5. Warm up tool embeddings (unless --no-warmup)")
     print()
 
