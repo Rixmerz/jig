@@ -68,3 +68,6 @@ uv.lock
 *.log
 .env
 .env.local
+
+# Runtime data from MCP doc indexer
+.mcp-docs/
