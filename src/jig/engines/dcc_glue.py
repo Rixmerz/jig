@@ -1,12 +1,16 @@
-"""DCC (DeltaCodeCube) integration for workflow context injection.
+"""DCC (DeltaCodeCube) glue — jig-internal orchestration.
 
 Handles DCC analysis execution, result summarization, tension gate logic,
 impact preview simulation, and experience collection from DCC results.
+
+This module contains jig's internal orchestration logic.  The abstract
+code-analysis contract (Protocol + dataclasses) lives in
+``jig.contracts.code_analysis``; backends register via
+``jig.engines.provider_registry``.
 """
 from __future__ import annotations
 
 import json
-import logging
 import subprocess
 import sys
 import time
@@ -17,14 +21,19 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from .graph_engine import Node
 
-from .hub_config import load_mcp_configs, load_enforcer_config
-from .proxy_pool import get_mcp_connection, increment_request_counter
 from .experience_memory import (
-    ExperienceMemoryStore, ExperienceEntry, merge_stores,
-    generalize_path, extract_file_keywords, guess_domain,
+    ExperienceEntry,
+    ExperienceMemoryStore,
     compute_relevance,
-    GLOBAL_MEMORY_FILE, PROJECT_MEMORIES_DIR,
+    extract_file_keywords,
+    generalize_path,
+    get_experience_store as _get_experience_store_fn,
+    get_project_experience_store as _get_project_experience_store_fn,
+    guess_domain,
+    merge_stores,
 )
+from .hub_config import load_mcp_configs
+from .proxy_pool import get_mcp_connection, increment_request_counter
 
 
 _SEVERITY_ORDER = {"critical": 0, "high": 1, "medium": 2, "low": 3}
@@ -33,40 +42,11 @@ _SEVERITY_ORDER = {"critical": 0, "high": 1, "medium": 2, "low": 3}
 def smells_for_files(paths: list[str] | set[str], *, max_results: int = 5) -> list[dict]:
     """Return up to ``max_results`` DCC code smells touching any of ``paths``.
 
-    Cheap best-effort: returns ``[]`` when the DCC database doesn't exist,
-    isn't populated, or any stage of the detection pipeline fails. Used by
-    ``snapshot_trigger`` to fold smell deltas into the context Claude sees
-    after an Edit/Write/Bash cycle.
+    Returns ``[]`` — the vendored DCC engine has been extracted to the standalone
+    ``delta-cube`` package. In-process smell detection is no longer available;
+    smells are surfaced via the ``deltacodecube`` MCP proxy when it is registered.
     """
-    try:
-        from jig.engines.dcc.config import DB_PATH
-        if not DB_PATH.exists():
-            return []
-        from jig.engines.dcc.cube.smells import SmellDetector
-        from jig.engines.dcc.db.database import get_connection
-    except Exception:
-        return []
-
-    wanted = {str(p) for p in paths if p}
-    if not wanted:
-        return []
-
-    try:
-        with get_connection() as conn:
-            detector = SmellDetector(conn)
-            all_smells = detector.detect_all()
-    except Exception:
-        return []
-
-    hits = []
-    for s in all_smells:
-        d = s.to_dict() if hasattr(s, "to_dict") else dict(s)
-        file_path = d.get("file_path") or d.get("file") or ""
-        if file_path in wanted or any(file_path.endswith(p) for p in wanted):
-            hits.append(d)
-
-    hits.sort(key=lambda d: _SEVERITY_ORDER.get(d.get("severity", "low"), 99))
-    return hits[:max_results]
+    return []
 
 
 # ============================================================================
@@ -258,34 +238,13 @@ _SMELL_SKILL_MAP: dict[str, dict] = {
 # Experience Memory Integration
 # ============================================================================
 
-_experience_store: ExperienceMemoryStore | None = None
-
-
+# Accessors delegated to experience_memory to avoid duplication.
 def _get_experience_store() -> ExperienceMemoryStore:
-    """Lazy-load the global experience memory store."""
-    global _experience_store
-    if _experience_store is None:
-        _experience_store = ExperienceMemoryStore()
-        _experience_store.load("global")
-    return _experience_store
+    return _get_experience_store_fn()
 
 
 def _get_project_experience_store(project_dir: str) -> ExperienceMemoryStore:
-    """Load project-scoped experience store."""
-    project_name = Path(project_dir).name
-    store = ExperienceMemoryStore()
-    store.load("project", project_name)
-    return store
-
-
-def get_experience_store() -> ExperienceMemoryStore:
-    """Public accessor for global experience store."""
-    return _get_experience_store()
-
-
-def get_project_experience_store(project_dir: str) -> ExperienceMemoryStore:
-    """Public accessor for project experience store."""
-    return _get_project_experience_store(project_dir)
+    return _get_project_experience_store_fn(project_dir)
 
 
 # ============================================================================
@@ -602,14 +561,16 @@ def _query_relevant_experiences(raw_results: dict, project_dir: str) -> list[dic
 # ============================================================================
 
 def _is_dcc_available() -> bool:
-    """Check if DCC is reachable — vendored internal proxy or external MCP.
+    """Check if DCC is reachable via an external MCP proxy.
+
+    DeltaCodeCube is now a standalone package (``delta-cube``). Register it
+    via ``proxy_add("dcc", "uvx", ["delta-cube"])`` for full integration.
 
     Order of checks:
-    1. ``internal_proxy["dcc"]`` — the vendored DeltaCodeCube registered
-       at server startup (0.1.0a24+). This is the primary path and
-       succeeds without any ``proxy_add`` on the user side.
-    2. ``deltacodecube`` in ``load_mcp_configs()`` — legacy external-MCP
-       path. Still honoured for users who run their own DCC subprocess.
+    1. ``internal_proxy["dcc"]`` — kept for compatibility; no longer registered
+       by default since the vendored engines/dcc/ folder was removed.
+    2. ``deltacodecube`` or ``dcc`` in ``load_mcp_configs()`` — the primary
+       path for users who have registered the external MCP via proxy_add.
     """
     try:
         from jig.engines import internal_proxy

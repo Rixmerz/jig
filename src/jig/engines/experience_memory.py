@@ -781,3 +781,27 @@ def format_checklist_for_prompt(checklist: dict) -> str:
         output = truncated + "\n\n_(checklist truncated)_"
 
     return output
+
+
+# ============================================================================
+# Public accessors (moved from dcc_integration to break circular deps)
+# ============================================================================
+
+_experience_store: "ExperienceMemoryStore | None" = None
+
+
+def get_experience_store() -> "ExperienceMemoryStore":
+    """Return the global experience memory store (lazy-loaded singleton)."""
+    global _experience_store
+    if _experience_store is None:
+        _experience_store = ExperienceMemoryStore()
+        _experience_store.load("global")
+    return _experience_store
+
+
+def get_project_experience_store(project_dir: str) -> "ExperienceMemoryStore":
+    """Return a project-scoped experience store for *project_dir*."""
+    project_name = Path(project_dir).name
+    store = ExperienceMemoryStore()
+    store.load("project", project_name)
+    return store

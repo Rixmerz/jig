@@ -1,10 +1,17 @@
 """Config tools: set_session, workflow_set_enabled, workflow_set_dcc_injection."""
 
-from jig.core.session import get_or_create_session, set_session_project_dir, resolve_project_dir
+from jig.core.session import get_or_create_session, resolve_project_dir, set_session_project_dir
 from jig.engines.hub_config import (
-    get_workflow_dir, load_enforcer_config, save_enforcer_config,
+    get_workflow_dir,
+    load_enforcer_config,
+    save_enforcer_config,
 )
-from jig.engines.dcc_integration import _is_dcc_available
+from jig.engines.provider_registry import get_provider as _get_provider
+
+
+def _is_dcc_available() -> bool:
+    """Check if a code-analysis provider is available. Delegates to provider registry."""
+    return _get_provider().is_available()
 
 
 def register_config_tools(mcp):
@@ -76,7 +83,7 @@ def register_config_tools(mcp):
             return {
                 "success": False,
                 "session_id": sid,
-                "message": f"Error setting workflow enabled state: {str(e)}",
+                "message": f"Error setting workflow enabled state: {e!s}",
                 "project_dir": resolved_dir
             }
 

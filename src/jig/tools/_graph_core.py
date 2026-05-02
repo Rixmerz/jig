@@ -19,7 +19,7 @@ from jig.engines.graph_state import (
     load_graph_state, save_graph_state, initialize_graph_state,
     reset_graph_state, get_graph_file, get_node_visit_warning,
 )
-from jig.engines.dcc_integration import (
+from jig.engines.dcc_glue import (
     _is_dcc_available, _resolve_dcc_config, _run_dcc_analysis,
     _collect_experiences_from_dcc, _check_tension_gate,
     _clear_tension_gate_state, _get_tension_gate_info,

@@ -86,21 +86,16 @@ def _register_tools() -> None:
     except Exception as e:  # pragma: no cover
         log.warning("[jig.server] tool archival failed: %s", e)
 
-    # Expose the vendored DeltaCodeCube as an internal proxy so its
-    # ~40 analysis tools are callable via ``execute_mcp_tool("dcc", …)``
-    # and discoverable via ``proxy_tools_search`` without the user
-    # having to register an external DCC MCP with ``proxy_add``.
-    try:
-        from fastmcp import FastMCP
-
-        from jig.engines.dcc.tools import register_all_tools as _dcc_register
-
-        dcc_holder = FastMCP(name="_dcc_holder")
-        _dcc_register(dcc_holder)
-        dcc_count = asyncio.run(_tool_archive.archive_external_mcp(dcc_holder, "dcc"))
-        log.info("[jig.server] DCC internal proxy: %d tools", dcc_count)
-    except Exception as e:  # pragma: no cover
-        log.warning("[jig.server] DCC internal proxy registration failed: %s", e)
+    # DeltaCodeCube has been extracted to the standalone ``delta-cube`` package.
+    # The vendored engines/dcc/ folder has been removed.  Users who want DCC
+    # analysis tools should install the package and register it as an MCP proxy:
+    #
+    #   uvx delta-cube          (runs the MCP server)
+    #   proxy_add("dcc", "uvx", ["delta-cube"])
+    #
+    # Once registered, all cube_* tools are discoverable via proxy_tools_search
+    # and callable via execute_mcp_tool("dcc", …) exactly as before.
+    log.debug("[jig.server] DCC internal proxy skipped — use standalone delta-cube package")
 
 
 def _warmup_embed_model_sync() -> None:
