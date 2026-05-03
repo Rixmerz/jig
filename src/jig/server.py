@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import logging
 import sys
-import threading
 
 from fastmcp import FastMCP
 
@@ -98,21 +97,58 @@ def _register_tools() -> None:
     log.debug("[jig.server] DCC internal proxy skipped — use standalone delta-cube package")
 
 
-def _warmup_embed_model_sync() -> None:
-    """Load fastembed once so the first ``proxy_tools_search`` is faster.
+def _install_proxy_cleanup() -> None:
+    """Make sure proxied MCP subprocesses die when jig itself exits.
 
-    Runs in a daemon thread — must not use ``asyncio`` (``mcp.run()`` owns
-    the process event loop).
+    Two paths:
+      - `atexit` for clean exits (FastMCP loop returns normally).
+      - SIGTERM/SIGINT/SIGHUP handlers for signal-driven shutdowns,
+        including the SIGTERM that PR_SET_PDEATHSIG sends when the
+        parent Claude session dies.
+
+    Both invoke `terminate_all_sync`, which signals each proxy's
+    process group directly — no asyncio loop required, since by this
+    point FastMCP's loop is already torn down. After the cleanup
+    completes, signal handlers re-raise the original signal under the
+    default disposition so the process actually exits with the
+    expected status.
     """
-    try:
-        from jig.core.embeddings import get_embedder
+    import atexit
+    import os
+    import signal as _signal
 
-        emb = get_embedder()
-        if emb.available:
-            emb.embed_one("warmup")
-            log.info("[jig.server] embedding model warm")
-    except Exception as e:
-        log.debug("[jig.server] embed warmup skipped: %s", e)
+    from jig.engines.proxy_pool import terminate_all_sync
+
+    _ran = False
+
+    def _cleanup() -> None:
+        nonlocal _ran
+        if _ran:
+            return
+        _ran = True
+        try:
+            killed = terminate_all_sync()
+            if killed:
+                print(
+                    f"[jig] terminated {len(killed)} proxied MCP(s): "
+                    f"{', '.join(killed)}",
+                    file=sys.stderr,
+                )
+        except Exception as e:
+            print(f"[jig] proxy cleanup failed: {e}", file=sys.stderr)
+
+    atexit.register(_cleanup)
+
+    def _on_signal(signum: int, _frame) -> None:
+        _cleanup()
+        _signal.signal(signum, _signal.SIG_DFL)
+        os.kill(os.getpid(), signum)
+
+    for sig in (_signal.SIGTERM, _signal.SIGINT, _signal.SIGHUP):
+        try:
+            _signal.signal(sig, _on_signal)
+        except (OSError, ValueError):
+            pass
 
 
 def _install_parent_death_signal() -> None:
@@ -143,15 +179,9 @@ def serve() -> None:
         stream=sys.stderr,
     )
     _install_parent_death_signal()
+    _install_proxy_cleanup()
     print(f"[jig] starting MCP server v{__version__}", file=sys.stderr)
     _register_tools()
-
-    threading.Thread(
-        target=_warmup_embed_model_sync,
-        name="jig-embed-warmup",
-        daemon=True,
-    ).start()
-
     mcp.run()
 
 
